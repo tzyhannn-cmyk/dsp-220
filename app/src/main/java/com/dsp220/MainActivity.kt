@@ -46,10 +46,23 @@ class MainActivity : AppCompatActivity() {
             NewPipe.init(object : Downloader() {
                 override fun execute(request: Request): Response {
                     val connection = URL(request.url()).openConnection() as HttpURLConnection
+                    
+                    // PERBAIKAN UTAMA: Mengikuti metode HTTP yang diminta (GET atau POST)
+                    val method = request.httpMethod() ?: "GET"
+                    connection.requestMethod = method
+                    
                     connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
                     
                     request.headers().forEach { (key, values) ->
                         connection.setRequestProperty(key, values.joinToString(","))
+                    }
+                    
+                    // PERBAIKAN UTAMA: Jika YouTube meminta POST, kirimkan paket data (dataToSend) ke server
+                    if (method == "POST" && request.dataToSend() != null) {
+                        connection.doOutput = true
+                        connection.outputStream.use { os ->
+                            os.write(request.dataToSend())
+                        }
                     }
                     
                     val responseCode = connection.responseCode
