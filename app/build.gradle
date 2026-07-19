@@ -1,5 +1,4 @@
 plugins {
-    // Sekarang kita tambahkan versi (version) agar Gradle mengenali pluginnya
     id 'com.android.application' version '8.7.0'
     id 'org.jetbrains.kotlin.android' version '2.0.0'
 }
@@ -42,6 +41,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     
-    // Core Pustaka NewPipe Extractor
-    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.4'
+    // PEMBARUAN UTAMA: Naik ke versi modern yang mendukung bypass keamanan YouTube terbaru
+    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.27.0'
 }
