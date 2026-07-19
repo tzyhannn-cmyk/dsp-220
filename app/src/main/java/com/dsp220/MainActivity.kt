@@ -12,9 +12,6 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
-import java.net.CookieHandler
-import java.net.CookieManager
-import java.net.CookiePolicy
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -26,9 +23,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // PERBAIKAN UTAMA: Mengaktifkan mesin penyimpan Cookie otomatis di seluruh sistem aplikasi
-        CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
-
+        // Kita biarkan NewPipe mengelola Cookie internalnya sendiri secara mandiri
         initNewPipeExtractor()
 
         webView = WebView(this)
@@ -56,17 +51,21 @@ class MainActivity : AppCompatActivity() {
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
-                    // Prioritaskan Header dan User-Agent bawaan asli dari NewPipe agar tidak bentrok
-                    var hasUserAgent = false
+                    // PERBAIKAN UTAMA: Menyusun dokumen data sesuai aturan standar internet
                     request.headers().forEach { (key, values) ->
-                        connection.setRequestProperty(key, values.joinToString(","))
-                        if (key.equals("User-Agent", ignoreCase = true)) {
-                            hasUserAgent = true
+                        if (key.equals("Cookie", ignoreCase = true)) {
+                            // YouTube WAJIB menggunakan titik koma (;) untuk memisahkan Cookie
+                            connection.setRequestProperty(key, values.joinToString("; "))
+                        } else {
+                            // Untuk informasi selain cookie, masukkan satu per satu secara bersih
+                            values.forEach { value ->
+                                connection.addRequestProperty(key, value)
+                            }
                         }
                     }
                     
-                    // Jika NewPipe tidak menyediakan User-Agent pada request tertentu, baru pakai backup ini
-                    if (!hasUserAgent) {
+                    // Pasang User-Agent cadangan jika sistem NewPipe mengosongkannya
+                    if (connection.getRequestProperty("User-Agent") == null) {
                         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
                     }
                     
