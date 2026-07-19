@@ -23,7 +23,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Kita biarkan NewPipe mengelola Cookie internalnya sendiri secara mandiri
         initNewPipeExtractor()
 
         webView = WebView(this)
@@ -51,22 +50,22 @@ class MainActivity : AppCompatActivity() {
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
-                    // PERBAIKAN UTAMA: Menyusun dokumen data sesuai aturan standar internet
+                    // PERBAIKAN UTAMA: Menyaring dan membersihkan header dari jebakan Gzip
                     request.headers().forEach { (key, values) ->
-                        if (key.equals("Cookie", ignoreCase = true)) {
-                            // YouTube WAJIB menggunakan titik koma (;) untuk memisahkan Cookie
-                            connection.setRequestProperty(key, values.joinToString("; "))
-                        } else {
-                            // Untuk informasi selain cookie, masukkan satu per satu secara bersih
-                            values.forEach { value ->
-                                connection.addRequestProperty(key, value)
+                        if (!key.equals("Accept-Encoding", ignoreCase = true)) {
+                            if (key.equals("Cookie", ignoreCase = true)) {
+                                connection.setRequestProperty(key, values.joinToString("; "))
+                            } else {
+                                values.forEach { value ->
+                                    connection.addRequestProperty(key, value)
+                                }
                             }
                         }
                     }
                     
-                    // Pasang User-Agent cadangan jika sistem NewPipe mengosongkannya
+                    // Gunakan User-Agent Browser standar modern
                     if (connection.getRequestProperty("User-Agent") == null) {
-                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     }
                     
                     if (method == "POST" && request.dataToSend() != null) {
@@ -80,6 +79,7 @@ class MainActivity : AppCompatActivity() {
                     val responseMessage = connection.responseMessage
                     val responseHeaders = connection.headerFields
                     
+                    // Membaca data streaming secara aman dalam format teks bersih
                     val responseBody = try {
                         connection.inputStream.bufferedReader().use { it.readText() }
                     } catch (e: Exception) {
