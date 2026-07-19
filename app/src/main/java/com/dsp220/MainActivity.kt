@@ -55,11 +55,19 @@ class MainActivity : AppCompatActivity() {
                     request.headers().forEach { (key, values) ->
                         connection.setRequestProperty(key, values.joinToString(","))
                     }
+                    
                     val responseCode = connection.responseCode
                     val responseMessage = connection.responseMessage
                     val responseHeaders = connection.headerFields
-                    val responseStream: InputStream = connection.inputStream
-                    return Response(responseCode, responseMessage, responseHeaders, responseStream, request.url())
+                    
+                    // PERBAIKAN: Membaca InputStream menjadi String seperti yang diminta compiler
+                    val responseBody = try {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } catch (e: Exception) {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    }
+                    
+                    return Response(responseCode, responseMessage, responseHeaders, responseBody, request.url())
                 }
             })
         } catch (e: Exception) {
@@ -107,4 +115,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
