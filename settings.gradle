@@ -5,6 +5,13 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' } // Gerbang JitPack dipusatkan di sini
+    }
+}
 rootProject.name = "DSP 220 PRO"
 include ':app'
-
