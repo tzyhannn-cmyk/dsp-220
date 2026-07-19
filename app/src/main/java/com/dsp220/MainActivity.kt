@@ -12,6 +12,9 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -22,6 +25,9 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // PERBAIKAN UTAMA: Mengaktifkan mesin penyimpan Cookie otomatis di seluruh sistem aplikasi
+        CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
 
         initNewPipeExtractor()
 
@@ -47,17 +53,23 @@ class MainActivity : AppCompatActivity() {
                 override fun execute(request: Request): Response {
                     val connection = URL(request.url()).openConnection() as HttpURLConnection
                     
-                    // PERBAIKAN UTAMA: Mengikuti metode HTTP yang diminta (GET atau POST)
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
-                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-                    
+                    // Prioritaskan Header dan User-Agent bawaan asli dari NewPipe agar tidak bentrok
+                    var hasUserAgent = false
                     request.headers().forEach { (key, values) ->
                         connection.setRequestProperty(key, values.joinToString(","))
+                        if (key.equals("User-Agent", ignoreCase = true)) {
+                            hasUserAgent = true
+                        }
                     }
                     
-                    // PERBAIKAN UTAMA: Jika YouTube meminta POST, kirimkan paket data (dataToSend) ke server
+                    // Jika NewPipe tidak menyediakan User-Agent pada request tertentu, baru pakai backup ini
+                    if (!hasUserAgent) {
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    }
+                    
                     if (method == "POST" && request.dataToSend() != null) {
                         connection.doOutput = true
                         connection.outputStream.use { os ->
@@ -65,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     
-                    val responseCode = connection.responseCode
+                    val responseCodeValue = connection.responseCode
                     val responseMessage = connection.responseMessage
                     val responseHeaders = connection.headerFields
                     
@@ -75,7 +87,7 @@ class MainActivity : AppCompatActivity() {
                         connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                     }
                     
-                    return Response(responseCode, responseMessage, responseHeaders, responseBody, request.url())
+                    return Response(responseCodeValue, responseMessage, responseHeaders, responseBody, request.url())
                 }
             })
         } catch (e: Exception) {
