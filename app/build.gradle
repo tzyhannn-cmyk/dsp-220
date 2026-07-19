@@ -1,6 +1,7 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
+    // Sekarang kita tambahkan versi (version) agar Gradle mengenali pluginnya
+    id 'com.android.application' version '8.7.0'
+    id 'org.jetbrains.kotlin.android' version '2.0.0'
 }
 
 android {
@@ -33,7 +34,7 @@ android {
 repositories {
     google()
     mavenCentral()
-    maven { url 'https://jitpack.io' } // Wajib ada untuk menarik NewPipe Extractor
+    maven { url 'https://jitpack.io' } 
 }
 
 dependencies {
@@ -41,7 +42,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     
-    // Core Pustaka NewPipe Extractor untuk membedah link YouTube
+    // Core Pustaka NewPipe Extractor
     implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.4'
 }
-
