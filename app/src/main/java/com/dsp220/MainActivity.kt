@@ -50,7 +50,6 @@ class MainActivity : AppCompatActivity() {
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
-                    // PERBAIKAN UTAMA: Menyaring dan membersihkan header dari jebakan Gzip
                     request.headers().forEach { (key, values) ->
                         if (!key.equals("Accept-Encoding", ignoreCase = true)) {
                             if (key.equals("Cookie", ignoreCase = true)) {
@@ -63,7 +62,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     
-                    // Gunakan User-Agent Browser standar modern
                     if (connection.getRequestProperty("User-Agent") == null) {
                         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     }
@@ -79,7 +77,6 @@ class MainActivity : AppCompatActivity() {
                     val responseMessage = connection.responseMessage
                     val responseHeaders = connection.headerFields
                     
-                    // Membaca data streaming secara aman dalam format teks bersih
                     val responseBody = try {
                         connection.inputStream.bufferedReader().use { it.readText() }
                     } catch (e: Exception) {
@@ -101,16 +98,24 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val extractor = ServiceList.YouTube.getStreamExtractor(url)
                     extractor.fetchPage()
+                    
                     val audioStreams = extractor.audioStreams
+                    val videoStreams = extractor.videoStreams // Cadangan jika audio-only disembunyikan YouTube
 
-                    if (!audioStreams.isNullOrEmpty()) {
-                        val rawAudioUrl = audioStreams[0].url
+                    // PERBAIKAN PENTING: Cari url audio murni dulu, kalau kosong ambil dari stream video umum
+                    val playableUrl = when {
+                        !audioStreams.isNullOrEmpty() -> audioStreams[0].url
+                        !videoStreams.isNullOrEmpty() -> videoStreams[0].url
+                        else -> null
+                    }
+
+                    if (playableUrl != null) {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onAudioExtracted('$rawAudioUrl');", null)
+                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onExtractionFailed('Audio stream tidak ditemukan.');", null)
+                            webView.evaluateJavascript("javascript:onExtractionFailed('Format audio maupun video tidak dapat ditemukan.');", null)
                         }
                     }
                 } catch (e: Exception) {
