@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -32,6 +33,16 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false 
+            
+            allowFileAccess = true
+            allowContentAccess = true
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
+            
+            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
         webView.webViewClient = WebViewClient()
@@ -100,9 +111,8 @@ class MainActivity : AppCompatActivity() {
                     extractor.fetchPage()
                     
                     val audioStreams = extractor.audioStreams
-                    val videoStreams = extractor.videoStreams // Cadangan jika audio-only disembunyikan YouTube
+                    val videoStreams = extractor.videoStreams
 
-                    // PERBAIKAN PENTING: Cari url audio murni dulu, kalau kosong ambil dari stream video umum
                     val playableUrl = when {
                         !audioStreams.isNullOrEmpty() -> audioStreams[0].url
                         !videoStreams.isNullOrEmpty() -> videoStreams[0].url
