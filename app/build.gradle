@@ -30,17 +30,11 @@ android {
     }
 }
 
-repositories {
-    google()
-    mavenCentral()
-    maven { url 'https://jitpack.io' } 
-}
-
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     
-    // PEMBARUAN UTAMA: Naik ke versi modern yang mendukung bypass keamanan YouTube terbaru
-    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.27.0'
+    // Menggunakan versi v0.26.1 yang aktif dan tersedia di JitPack
+    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.1'
 }
