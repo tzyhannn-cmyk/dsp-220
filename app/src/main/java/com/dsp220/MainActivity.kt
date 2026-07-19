@@ -3,6 +3,7 @@ package com.dsp220.pro
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient // PERBAIKAN: Untuk mengaktifkan popup alert
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -23,35 +24,41 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Inisialisasi NewPipe Extractor dengan Downloader Sederhana via HTTP
+        // 1. Inisialisasi NewPipe Extractor
         initNewPipeExtractor()
 
-        // 2. Inisialisasi WebView sebagai wadah UI DSP 220 PRO
+        // 2. Inisialisasi WebView
         webView = WebView(this)
         setContentView(webView)
 
-        // 3. Konfigurasi Keamanan & Fitur Web Audio agar berjalan mulus
+        // 3. Konfigurasi Keamanan & Fitur Web Audio
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            mediaPlaybackRequiresUserGesture = false // Mengizinkan autoplay audio lewat JS
+            mediaPlaybackRequiresUserGesture = false 
         }
 
         webView.webViewClient = WebViewClient()
         
-        // 4. Daftarkan Jembatan (Bridge) agar HTML bisa memanggil fungsi Android
+        // PERBAIKAN PENTING: Mengaktifkan WebChromeClient agar alert() JavaScript bisa muncul di Android
+        webView.webChromeClient = WebChromeClient() 
+        
+        // 4. Daftarkan Jembatan (Bridge)
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
-        // 5. Muat file HTML DSP dari folder assets
+        // 5. Muat file HTML DSP
         webView.loadUrl("file:///android_asset/index.html")
     }
 
-    // Fungsi inisialisasi client network untuk NewPipe Extractor
     private fun initNewPipeExtractor() {
         try {
             NewPipe.init(object : Downloader() {
                 override fun execute(request: Request): Response {
                     val connection = URL(request.url()).openConnection() as HttpURLConnection
+                    
+                    // PERBAIKAN PENTING: Tambahkan User-Agent Browser agar YouTube tidak memblokir koneksi kita
+                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    
                     request.headers().forEach { (key, values) ->
                         connection.setRequestProperty(key, values.joinToString(","))
                     }
@@ -60,7 +67,6 @@ class MainActivity : AppCompatActivity() {
                     val responseMessage = connection.responseMessage
                     val responseHeaders = connection.headerFields
                     
-                    // PERBAIKAN: Membaca InputStream menjadi String seperti yang diminta compiler
                     val responseBody = try {
                         connection.inputStream.bufferedReader().use { it.readText() }
                     } catch (e: Exception) {
@@ -75,28 +81,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========================================================
-    //  NATIVE BRIDGE ENGINE (Penghubung HTML & Android)
-    // ========================================================
     inner class AndroidBridge {
-        
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
-            // Jalankan proses ekstraksi di background thread agar aplikasi tidak hang/freeze
             Thread {
                 try {
-                    // Panggil extractor YouTube bawaan NewPipe
+                    // Ekstraksi Link YouTube via NewPipe
                     val extractor = ServiceList.YouTube.getStreamExtractor(url)
                     extractor.fetchPage()
 
-                    // Ambil daftar streaming audio saja (format m4a atau webm)
                     val audioStreams = extractor.audioStreams
 
                     if (!audioStreams.isNullOrEmpty()) {
-                        // Ambil link streaming mentah (.m4a) urutan pertama dengan kualitas terbaik
+                        // Ambil URL streaming mentah format audio teratas
                         val rawAudioUrl = audioStreams[0].url
 
-                        // Kembalikan URL mentah ke fungsi JavaScript 'onAudioExtracted' di UI Thread
                         runOnUiThread {
                             webView.evaluateJavascript("javascript:onAudioExtracted('$rawAudioUrl');", null)
                         }
@@ -107,9 +106,15 @@ class MainActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        val errorClean = e.message?.replace("'", "\\'") ?: "Unknown Error"
+                        // Kirim detail pesan error asli agar kita tahu letak kendalanya
+                        val errorClean = e.toString().replace("'", "\\'") 
                         webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
+                }
+            }.start()
+        }
+    }
+}
                 }
             }.start()
         }
