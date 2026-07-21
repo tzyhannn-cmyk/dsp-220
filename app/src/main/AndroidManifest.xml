@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- MEMBERIKAN IZIN INTERNET (WAJIB) -->
+    <!-- IZIN AKSES INTERNET & JARINGAN -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- IZIN PEMUTARAN LATAR BELAKANG (BACKGROUND PLAYBACK) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -14,13 +19,21 @@
         
         <activity
             android:name=".MainActivity"
+            <!-- MENCEGAH APK TER-RESET SAAT LAYAR DIPUTAR -->
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- PENDAFTARAN SERVICE UNTUK LATAR BELAKANG -->
+        <service 
+            android:name=".PlaybackService" 
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
+
     </application>
 
 </manifest>
-
