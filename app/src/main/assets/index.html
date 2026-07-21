@@ -574,115 +574,43 @@
         const currentTimeDisplay = document.getElementById('currentTimeDisplay');
         const durationDisplay = document.getElementById('durationDisplay');
 
-        // Status untuk menghindari loncatan slider saat di-drag pengguna
-        let isUserSeeking = false;
-
         function formatTime(seconds) {
-            if (isNaN(seconds) || seconds < 0) return "0:00";
+            if (isNaN(seconds)) return "0:00";
             const m = Math.floor(seconds / 60);
             const s = Math.floor(seconds % 60);
             return `${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        function setPlayPauseUI(isPlaying) {
-            if (isPlaying) {
-                playPauseBtn.innerText = "PAUSE";
-                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
-            } else {
-                playPauseBtn.innerText = "PLAY";
-                playPauseBtn.className = "bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
-            }
-        }
-
-        /* --- SINKRONISASI SLIDER & TOMBOL PLAY/PAUSE --- */
         playPauseBtn.addEventListener('click', () => {
-            // Jika berjalan di Android Native via App Bridge
-            if (window.AndroidBridge && window.AndroidBridge.togglePlayPauseNative) {
-                window.AndroidBridge.togglePlayPauseNative();
-                return;
-            }
-
-            // Pemutaran HTML5 / Web Audio DSP Fallback
             if (!audioEl.src) return;
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             
             if (audioEl.paused) {
-                audioEl.play().then(() => setPlayPauseUI(true)).catch(console.error);
+                audioEl.play();
+                playPauseBtn.innerText = "PAUSE";
+                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
             } else {
                 audioEl.pause();
-                setPlayPauseUI(false);
+                playPauseBtn.innerText = "PLAY";
+                playPauseBtn.className = "bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
             }
         });
 
-        // Event listener slider saat digeser pengguna
-        seekSlider.addEventListener('mousedown', () => { isUserSeeking = true; });
-        seekSlider.addEventListener('touchstart', () => { isUserSeeking = true; });
-
-        seekSlider.addEventListener('input', () => {
-            isUserSeeking = true;
-            currentTimeDisplay.innerText = formatTime(seekSlider.value);
-        });
-
-        function handleSeekEnd() {
-            const seekTime = parseFloat(seekSlider.value);
-            
-            // Kirim perintah seek ke Native Android (jika ada)
-            if (window.AndroidBridge && window.AndroidBridge.seekToNative) {
-                window.AndroidBridge.seekToNative(Math.floor(seekTime * 1000));
-            }
-
-            // Kirim perintah seek ke tag audio HTML (fallback)
-            if (audioEl.src) {
-                audioEl.currentTime = seekTime;
-            }
-
-            isUserSeeking = false;
-        }
-
-        seekSlider.addEventListener('change', handleSeekEnd);
-        seekSlider.addEventListener('mouseup', handleSeekEnd);
-        seekSlider.addEventListener('touchend', handleSeekEnd);
-
-        // Event listener standar HTML5 Audio
         audioEl.addEventListener('loadedmetadata', () => {
-            if (!isNaN(audioEl.duration) && audioEl.duration > 0) {
-                seekSlider.max = audioEl.duration;
-                durationDisplay.innerText = formatTime(audioEl.duration);
-            }
+            seekSlider.max = audioEl.duration;
+            durationDisplay.innerText = formatTime(audioEl.duration);
         });
 
         audioEl.addEventListener('timeupdate', () => {
-            if (!isUserSeeking && !isNaN(audioEl.currentTime)) {
-                seekSlider.value = audioEl.currentTime;
-                currentTimeDisplay.innerText = formatTime(audioEl.currentTime);
-            }
+            if (!seekSlider.matches(':active')) seekSlider.value = audioEl.currentTime;
+            currentTimeDisplay.innerText = formatTime(audioEl.currentTime);
         });
 
+        seekSlider.addEventListener('input', () => { audioEl.currentTime = seekSlider.value; });
         audioEl.addEventListener('ended', () => {
-            setPlayPauseUI(false);
-            seekSlider.value = 0;
-            currentTimeDisplay.innerText = "0:00";
+            playPauseBtn.innerText = "PLAY";
+            playPauseBtn.className = "bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
         });
-
-        /* --- FUNGSI BRIDGE NATIVE ANDROID UNTUK PEMBARUAN SLIDER REAL-TIME --- */
-        window.updateNativeProgress = function(currentMs, durationMs) {
-            const curSec = currentMs / 1000;
-            const durSec = durationMs / 1000;
-
-            if (durSec > 0 && Math.abs(parseFloat(seekSlider.max) - durSec) > 0.5) {
-                seekSlider.max = durSec;
-                durationDisplay.innerText = formatTime(durSec);
-            }
-
-            if (!isUserSeeking) {
-                seekSlider.value = curSec;
-                currentTimeDisplay.innerText = formatTime(curSec);
-            }
-        };
-
-        window.updateNativeState = function(isPlaying) {
-            setPlayPauseUI(isPlaying);
-        };
 
         function initAudioEngine() {
             if (audioCtx) return;
@@ -773,13 +701,16 @@
                 audioEl.crossOrigin = null; 
                 audioEl.src = URL.createObjectURL(file);
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-                audioEl.play().then(() => setPlayPauseUI(true)).catch(console.error);
+                audioEl.play();
+                playPauseBtn.innerText = "PAUSE";
+                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
             }
         });
 
-        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE --- */
+        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE (UPDATED) --- */
         let extractionTimeout = null;
 
+        // Normalisasi URL YouTube (Mendukung format youtu.be, shorts, & watch?v=)
         function normalizeYouTubeUrl(url) {
             try {
                 let videoId = "";
@@ -821,10 +752,11 @@
                 extractBtn.disabled = true;
                 extractBtn.classList.add("opacity-60", "cursor-not-allowed");
 
+                // Timeout 30 Detik jika Native Android tidak merespon
                 clearTimeout(extractionTimeout);
                 extractionTimeout = setTimeout(() => {
                     resetExtractButton();
-                    alert("Proses ekstraksi waktu habis (Timeout). Periksa koneksi internet.");
+                    alert("Proses ekstraksi waktu habis (Timeout). Periksa koneksi internet atau coba link lain.");
                 }, 30000);
 
                 window.AndroidBridge.extractYouTubeAudio(cleanUrl);
@@ -833,33 +765,23 @@
             }
         }
 
-        /* --- HASIL PENGGABUNGAN FUNGSI EXTRACTED DENGAN NATIVE ANDROID BRIDGE --- */
-        function onAudioExtracted(playableUrl, durationMs) {
+        function onAudioExtracted(audioUrl) {
             resetExtractButton();
+            initAudioEngine(); 
+            
+            // Konfigurasi CORS agar WebAudio DSP bisa memproses stream audio
+            audioEl.crossOrigin = "anonymous";
+            audioEl.src = audioUrl;
 
-            if (durationMs && durationMs > 0) {
-                seekSlider.max = durationMs / 1000;
-                durationDisplay.innerText = formatTime(durationMs / 1000);
-            }
-
-            // Memutar audio lewat MediaPlayer / PlaybackService Native Android
-            if (window.AndroidBridge && window.AndroidBridge.playAudioNative) {
-                window.AndroidBridge.playAudioNative(playableUrl);
-            } else {
-                // Fallback pemutaran via HTML5 WebAudio DSP
-                initAudioEngine(); 
-                audioEl.crossOrigin = "anonymous";
-                audioEl.src = playableUrl;
-
-                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-                
-                audioEl.play().then(() => {
-                    setPlayPauseUI(true);
-                }).catch(err => {
-                    console.error("Error memutar audio extracted:", err);
-                    alert("Audio berhasil diekstrak, namun gagal diputar oleh browser (CORS / Format tidak didukung).");
-                });
-            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            audioEl.play().then(() => {
+                playPauseBtn.innerText = "PAUSE";
+                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+            }).catch(err => {
+                console.error("Error memutar audio extracted:", err);
+                alert("Audio berhasil diekstrak, namun gagal diputar oleh browser (CORS / Format tidak didukung).");
+            });
         }
 
         function onExtractionFailed(errorMsg) {
