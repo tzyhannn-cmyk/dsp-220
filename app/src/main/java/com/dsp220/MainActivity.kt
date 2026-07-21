@@ -1,10 +1,11 @@
 package com.dsp220.pro
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -41,7 +42,7 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
-            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
+            // Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
@@ -103,6 +104,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class AndroidBridge {
+
+        // --- FITUR BARU: Menjalankan Background Playback Service ---
+        @JavascriptInterface
+        fun startBackgroundService() {
+            try {
+                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // --- FITUR BARU: Menghentikan Background Playback Service ---
+        @JavascriptInterface
+        fun stopBackgroundService() {
+            try {
+                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
+                stopService(serviceIntent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // --- FUNGSI ASLI UNTUK EKSTRAKSI YOUTUBE ---
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
