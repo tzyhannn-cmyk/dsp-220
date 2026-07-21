@@ -17,9 +17,9 @@
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:usesCleartextTraffic="true">
         
+        <!-- MENCEGAH APK TER-RESET SAAT LAYAR DIPUTAR -->
         <activity
             android:name=".MainActivity"
-            <!-- MENCEGAH APK TER-RESET SAAT LAYAR DIPUTAR -->
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true">
             <intent-filter>
