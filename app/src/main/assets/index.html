@@ -499,7 +499,7 @@
         const chartFreqs = ['20Hz', '50Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
         const eqFrequencies = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
         
-        // Dynamic EQ Control UI Generation (Modern DOM Method)
+        // Dynamic EQ Control UI Generation
         function renderEQControls(ch) {
             const container = document.getElementById(`eq-container-${ch}`);
             if (!container) return;
@@ -697,7 +697,9 @@
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                initAudioEngine(); audioEl.src = URL.createObjectURL(file);
+                initAudioEngine(); 
+                audioEl.crossOrigin = null; 
+                audioEl.src = URL.createObjectURL(file);
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 audioEl.play();
                 playPauseBtn.innerText = "PAUSE";
@@ -705,33 +707,92 @@
             }
         });
 
-        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE --- */
+        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE (UPDATED) --- */
+        let extractionTimeout = null;
+
+        // Normalisasi URL YouTube (Mendukung format youtu.be, shorts, & watch?v=)
+        function normalizeYouTubeUrl(url) {
+            try {
+                let videoId = "";
+                if (url.includes("youtu.be/")) {
+                    videoId = url.split("youtu.be/")[1].split("?")[0].split("/")[0];
+                } else if (url.includes("youtube.com/shorts/")) {
+                    videoId = url.split("youtube.com/shorts/")[1].split("?")[0].split("/")[0];
+                } else if (url.includes("watch?v=")) {
+                    videoId = url.split("watch?v=")[1].split("&")[0];
+                }
+                if (videoId) {
+                    return "https://www.youtube.com/watch?v=" + videoId;
+                }
+            } catch (e) {
+                console.error("Gagal parse URL YouTube", e);
+            }
+            return url;
+        }
+
+        function resetExtractButton() {
+            clearTimeout(extractionTimeout);
+            const extractBtn = document.getElementById('extractYtBtn');
+            if (extractBtn) {
+                extractBtn.innerText = "EXTRACT";
+                extractBtn.disabled = false;
+                extractBtn.classList.remove("opacity-60", "cursor-not-allowed");
+            }
+        }
+
         function sendUrlToAndroid() {
-            const url = document.getElementById('ytUrlInput').value;
-            if (!url) return alert('Masukkan link YouTube terlebih dahulu!');
+            const rawUrl = document.getElementById('ytUrlInput').value.trim();
+            if (!rawUrl) return alert('Masukkan link YouTube terlebih dahulu!');
+
+            const cleanUrl = normalizeYouTubeUrl(rawUrl);
+            const extractBtn = document.getElementById('extractYtBtn');
 
             if (window.AndroidBridge) {
-                document.getElementById('extractYtBtn').innerText = "EXTRACTING...";
-                window.AndroidBridge.extractYouTubeAudio(url);
+                extractBtn.innerText = "EXTRACTING...";
+                extractBtn.disabled = true;
+                extractBtn.classList.add("opacity-60", "cursor-not-allowed");
+
+                // Timeout 30 Detik jika Native Android tidak merespon
+                clearTimeout(extractionTimeout);
+                extractionTimeout = setTimeout(() => {
+                    resetExtractButton();
+                    alert("Proses ekstraksi waktu habis (Timeout). Periksa koneksi internet atau coba link lain.");
+                }, 30000);
+
+                window.AndroidBridge.extractYouTubeAudio(cleanUrl);
             } else {
                 alert("Fitur ekstraksi hanya berfungsi di dalam aplikasi Android.");
             }
         }
 
         function onAudioExtracted(audioUrl) {
-            document.getElementById('extractYtBtn').innerText = "EXTRACT";
+            resetExtractButton();
             initAudioEngine(); 
+            
+            // Konfigurasi CORS agar WebAudio DSP bisa memproses stream audio
+            audioEl.crossOrigin = "anonymous";
             audioEl.src = audioUrl;
+
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            audioEl.play();
-            playPauseBtn.innerText = "PAUSE";
-            playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+            
+            audioEl.play().then(() => {
+                playPauseBtn.innerText = "PAUSE";
+                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+            }).catch(err => {
+                console.error("Error memutar audio extracted:", err);
+                alert("Audio berhasil diekstrak, namun gagal diputar oleh browser (CORS / Format tidak didukung).");
+            });
         }
 
         function onExtractionFailed(errorMsg) {
-            document.getElementById('extractYtBtn').innerText = "EXTRACT";
-            alert("Ekstraksi Gagal: " + errorMsg);
+            resetExtractButton();
+            alert("Ekstraksi Gagal: " + (errorMsg || "Terjadi kesalahan pada extractor Android."));
         }
+
+        audioEl.onerror = function() {
+            resetExtractButton();
+            console.error("Audio Load Error:", audioEl.error);
+        };
 
         function toggleDVC() {
             dvcEnabled = !dvcEnabled;
@@ -842,14 +903,8 @@
             for(let i=0; i<15; i++) {
                 const el1 = document.getElementById(`eq-1-${i}`);
                 const el2 = document.getElementById(`eq-2-${i}`);
-                if (el1) {
-                    const g1 = parseFloat(el1.value);
-                    document.getElementById(`eq-lbl-1-${i}`).innerText = (g1 > 0 ? "+" : "") + g1 + "dB";
-                }
-                if (el2) {
-                    const g2 = parseFloat(el2.value);
-                    document.getElementById(`eq-lbl-2-${i}`).innerText = (g2 > 0 ? "+" : "") + g2 + "dB";
-                }
+                if (el1) document.getElementById(`eq-lbl-1-${i}`).innerText = (parseFloat(el1.value) > 0 ? "+" : "") + parseFloat(el1.value) + "dB";
+                if (el2) document.getElementById(`eq-lbl-2-${i}`).innerText = (parseFloat(el2.value) > 0 ? "+" : "") + parseFloat(el2.value) + "dB";
             }
 
             let protectedVol1 = vol1; let protectedVol2 = vol2;
@@ -870,7 +925,6 @@
 
             if (!audioCtx) return;
 
-            // Input Routing Logic
             const applyRouteValue = (gL, gR, route) => {
                 if (route === "MONO") { gL.gain.setValueAtTime(0.707, audioCtx.currentTime); gR.gain.setValueAtTime(0.707, audioCtx.currentTime); }
                 else if (route === "LEFT") { gL.gain.setValueAtTime(1.0, audioCtx.currentTime); gR.gain.setValueAtTime(0.0, audioCtx.currentTime); }
@@ -880,7 +934,6 @@
             applyRouteValue(routingGains.ch1_L, routingGains.ch1_R, routeCh1);
             applyRouteValue(routingGains.ch2_L, routingGains.ch2_R, routeCh2);
 
-            // Output Routing Matrix Logic
             const applyOutRouting = (gOutL, gOutR, mode) => {
                 if (mode === 'L') { gOutL.gain.setValueAtTime(1.0, audioCtx.currentTime); gOutR.gain.setValueAtTime(0.0, audioCtx.currentTime); }
                 else if (mode === 'R') { gOutL.gain.setValueAtTime(0.0, audioCtx.currentTime); gOutR.gain.setValueAtTime(1.0, audioCtx.currentTime); }
