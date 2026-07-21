@@ -121,26 +121,77 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun pauseAudioNative() {
-            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
-                action = PlaybackService.ACTION_PAUSE
-            }
-            startService(intent)
+            sendIntentToService(PlaybackService.ACTION_PAUSE)
         }
 
         @JavascriptInterface
         fun resumeAudioNative() {
-            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
-                action = PlaybackService.ACTION_RESUME
-            }
-            startService(intent)
+            sendIntentToService(PlaybackService.ACTION_RESUME)
         }
 
         @JavascriptInterface
         fun stopAudioNative() {
-            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
-                action = PlaybackService.ACTION_STOP
+            sendIntentToService(PlaybackService.ACTION_STOP)
+        }
+
+        // --- KONTROL DLMS / DSP NATIVE VIA JAVASCRIPT ---
+
+        @JavascriptInterface
+        fun setGainNative(gainDb: Float) {
+            sendIntentToService(PlaybackService.ACTION_SET_GAIN) {
+                putExtra("GAIN", gainDb)
             }
-            startService(intent)
+        }
+
+        @JavascriptInterface
+        fun setEqBandNative(bandIndex: Int, gainDb: Float) {
+            sendIntentToService(PlaybackService.ACTION_SET_EQ_BAND) {
+                putExtra("BAND_INDEX", bandIndex)
+                putExtra("BAND_GAIN", gainDb)
+            }
+        }
+
+        @JavascriptInterface
+        fun setShelfNative(type: String, frequency: Float, gainDb: Float) {
+            sendIntentToService("com.dsp220.pro.SET_SHELF") {
+                putExtra("SHELF_TYPE", type)
+                putExtra("FREQ", frequency)
+                putExtra("GAIN", gainDb)
+            }
+        }
+
+        @JavascriptInterface
+        fun setXoverNative(type: String, frequency: Float, cutoffType: String) {
+            sendIntentToService("com.dsp220.pro.SET_XOVER") {
+                putExtra("XOVER_TYPE", type)
+                putExtra("FREQ", frequency)
+                putExtra("CUTOFF_TYPE", cutoffType)
+            }
+        }
+
+        @JavascriptInterface
+        fun setCompressorNative(thresholdDb: Float, ratio: Float, attackMs: Float, releaseMs: Float) {
+            sendIntentToService("com.dsp220.pro.SET_COMPRESSOR") {
+                putExtra("THRESHOLD", thresholdDb)
+                putExtra("RATIO", ratio)
+                putExtra("ATTACK", attackMs)
+                putExtra("RELEASE", releaseMs)
+            }
+        }
+
+        @JavascriptInterface
+        fun setLimiterNative(thresholdDb: Float) {
+            sendIntentToService(PlaybackService.ACTION_SET_LIMITER) {
+                putExtra("THRESHOLD", thresholdDb)
+            }
+        }
+
+        @JavascriptInterface
+        fun setDelayNative(channel: Int, delayMs: Float) {
+            sendIntentToService("com.dsp220.pro.SET_DELAY") {
+                putExtra("CHANNEL", channel)
+                putExtra("DELAY_MS", delayMs)
+            }
         }
 
         // --- EKSTRAKSI YOUTUBE ---
@@ -180,6 +231,15 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }.start()
+        }
+
+        // Fungsi pembantu agar pengiriman intent dari AndroidBridge ke PlaybackService lebih ringkas
+        private fun sendIntentToService(actionName: String, extras: (Intent.() -> Unit)? = null) {
+            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
+                action = actionName
+                extras?.invoke(this)
+            }
+            startService(intent)
         }
     }
 }
