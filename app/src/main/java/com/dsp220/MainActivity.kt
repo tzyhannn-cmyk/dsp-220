@@ -143,7 +143,7 @@ class MainActivity : AppCompatActivity() {
             startService(intent)
         }
 
-        // --- EKSTRAKSI YOUTUBE ASLI MILIK ANDA (TETAP SAMA 100%) ---
+        // --- EKSTRAKSI YOUTUBE ---
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -162,21 +162,24 @@ class MainActivity : AppCompatActivity() {
 
                     if (playableUrl != null) {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
+                            webView.evaluateJavascript("onAudioExtracted('$playableUrl')", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onExtractionFailed('Format audio maupun video tidak dapat ditemukan.');", null)
+                            webView.evaluateJavascript("onExtractionFailed('Format audio maupun video tidak dapat ditemukan.')", null)
                         }
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        val errorClean = e.toString().replace("'", "\\'") 
-                        webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
+                        // Sanitasi karakter agar JavaScript tidak error (SyntaxError) akibat newline/quote
+                        val errorClean = (e.message ?: e.toString())
+                            .replace("\\", "\\\\")
+                            .replace("'", "\\'")
+                            .replace("\n", " ")
+                        webView.evaluateJavascript("onExtractionFailed('$errorClean')", null)
                     }
                 }
             }.start()
         }
     }
 }
-
