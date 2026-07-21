@@ -1,18 +1,13 @@
 package com.dsp220.pro
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.webkit.JavascriptInterface
-import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
+import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -24,17 +19,6 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private var filePathCallback: ValueCallback<Array<Uri>>? = null
-
-    private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val results = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
-            filePathCallback?.onReceiveValue(results)
-        } else {
-            filePathCallback?.onReceiveValue(null)
-        }
-        filePathCallback = null
-    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,30 +41,12 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
+            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
         webView.webViewClient = WebViewClient()
-
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(
-                webView: WebView?,
-                filePathCallback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: FileChooserParams?
-            ): Boolean {
-                this@MainActivity.filePathCallback?.onReceiveValue(null)
-                this@MainActivity.filePathCallback = filePathCallback
-
-                try {
-                    val intent = fileChooserParams?.createIntent()
-                    fileChooserLauncher.launch(intent)
-                } catch (e: Exception) {
-                    this@MainActivity.filePathCallback = null
-                    return false
-                }
-                return true
-            }
-        } 
+        webView.webChromeClient = WebChromeClient() 
         
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
         webView.loadUrl("file:///android_asset/index.html")
@@ -91,8 +57,7 @@ class MainActivity : AppCompatActivity() {
             NewPipe.init(object : Downloader() {
                 override fun execute(request: Request): Response {
                     val connection = URL(request.url()).openConnection() as HttpURLConnection
-                    connection.instanceFollowRedirects = true // 1. Pastikan mengikut pengalihan URL
-
+                    
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
@@ -120,10 +85,8 @@ class MainActivity : AppCompatActivity() {
                     }
                     
                     val responseCodeValue = connection.responseCode
-                    val responseMessage = connection.responseMessage ?: ""
-                    
-                    // 2. PERBAIKAN KRITIS: Filter key null agar NewPipeExtractor tidak melempar NullPointerException
-                    val responseHeaders = connection.headerFields.filterKeys { it != null }
+                    val responseMessage = connection.responseMessage
+                    val responseHeaders = connection.headerFields
                     
                     val responseBody = try {
                         connection.inputStream.bufferedReader().use { it.readText() }
@@ -140,17 +103,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class AndroidBridge {
-
-        @JavascriptInterface
-        fun startBackgroundService() {
-            val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
-            }
-        }
-
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -158,40 +110,28 @@ class MainActivity : AppCompatActivity() {
                     val extractor = ServiceList.YouTube.getStreamExtractor(url)
                     extractor.fetchPage()
                     
-                    val title = extractor.name ?: "Judul Tidak Diketahui"
-                    val uploader = extractor.uploaderName ?: "Uploader Tidak Diketahui"
-                    val thumbnailUrl = extractor.thumbnails?.firstOrNull()?.url ?: ""
-                    
                     val audioStreams = extractor.audioStreams
                     val videoStreams = extractor.videoStreams
 
-                    val audioUrl = audioStreams?.firstOrNull()?.url ?: ""
-                    val videoUrl = videoStreams?.firstOrNull()?.url ?: ""
+                    val playableUrl = when {
+                        !audioStreams.isNullOrEmpty() -> audioStreams[0].url
+                        !videoStreams.isNullOrEmpty() -> videoStreams[0].url
+                        else -> null
+                    }
 
-                    if (audioUrl.isNotEmpty() || videoUrl.isNotEmpty()) {
-                        val jsonResponse = JSONObject().apply {
-                            put("title", title)
-                            put("uploader", uploader)
-                            put("thumbnail", thumbnailUrl)
-                            put("audioUrl", audioUrl)
-                            put("videoUrl", videoUrl)
-                        }.toString()
-
+                    if (playableUrl != null) {
                         runOnUiThread {
-                            // 3. PERBAIKAN KRITIS: Oper JSON secara langsung tanpa pembungkus petik tunggal '...'
-                            webView.evaluateJavascript("onExtractionSuccess($jsonResponse);", null)
+                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("onExtractionFailed('Format media tidak dapat ditemukan.');", null)
+                            webView.evaluateJavascript("javascript:onExtractionFailed('Format audio maupun video tidak dapat ditemukan.');", null)
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    // Sanitisasi pesan error agar aman dipasing ke JS
-                    val safeErrorMsg = JSONObject.quote(e.localizedMessage ?: e.toString())
                     runOnUiThread {
-                        webView.evaluateJavascript("onExtractionFailed($safeErrorMsg);", null)
+                        val errorClean = e.toString().replace("'", "\\'") 
+                        webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
                 }
             }.start()
