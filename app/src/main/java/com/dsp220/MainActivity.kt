@@ -112,13 +112,10 @@ class MainActivity : AppCompatActivity() {
                     val audioStreams = extractor.audioStreams
                     val videoStreams = extractor.videoStreams
 
-                    // 1. Ambil URL Audio saja
                     val audioUrl = if (!audioStreams.isNullOrEmpty()) audioStreams[0].url else ""
-                    
-                    // 2. Ambil URL Video Muxed
                     val videoUrl = if (!videoStreams.isNullOrEmpty()) videoStreams[0].url else ""
 
-                    if (audioUrl.isNotEmpty() || videoUrl.isNotEmpty()) {
+                    if (!audioUrl.isNullOrEmpty() || !videoUrl.isNullOrEmpty()) {
                         runOnUiThread {
                             webView.evaluateJavascript("javascript:onMediaExtracted('$audioUrl', '$videoUrl');", null)
                         }
@@ -129,9 +126,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        // Perbaikan safe call di sini:
                         val errorMessage = e.localizedMessage ?: e.message ?: "Unknown error"
-                        val errorClean = errorMessage.replace("'", "\\'")
+                        val errorClean = errorMessage.replace("'", "\\'") 
                         webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
                 }
