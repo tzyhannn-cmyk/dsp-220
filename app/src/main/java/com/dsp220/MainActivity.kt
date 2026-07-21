@@ -1,13 +1,18 @@
 package com.dsp220.pro
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import org.json.JSONObject
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -19,6 +24,20 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+
+    // Callback untuk pemilih file lokal dari WebView
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
+    // Launcher untuk menangani jendela pemilih file Android
+    private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val results = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+            filePathCallback?.onReceiveValue(results)
+        } else {
+            filePathCallback?.onReceiveValue(null)
+        }
+        filePathCallback = null
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,12 +60,31 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
-            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
         webView.webViewClient = WebViewClient()
-        webView.webChromeClient = WebChromeClient() 
+
+        // PEMBARUAN: WebChromeClient didukung penuh untuk File Picker lokal
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                this@MainActivity.filePathCallback?.onReceiveValue(null)
+                this@MainActivity.filePathCallback = filePathCallback
+
+                try {
+                    val intent = fileChooserParams?.createIntent()
+                    fileChooserLauncher.launch(intent)
+                } catch (e: Exception) {
+                    this@MainActivity.filePathCallback = null
+                    return false
+                }
+                return true
+            }
+        } 
         
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
         webView.loadUrl("file:///android_asset/index.html")
@@ -103,6 +141,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class AndroidBridge {
+
+        // FITUR BARU 1: Menjalankan PlaybackService untuk pemutaran latar belakang
+        @JavascriptInterface
+        fun startBackgroundService() {
+            val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        }
+
+        // FITUR BARU 2: Mengekstrak metadata lengkap + URL Audio & Video
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -110,22 +161,37 @@ class MainActivity : AppCompatActivity() {
                     val extractor = ServiceList.YouTube.getStreamExtractor(url)
                     extractor.fetchPage()
                     
+                    // Mengambil metadata informasi lagu
+                    val title = extractor.name ?: "Judul Tidak Diketahui"
+                    val uploader = extractor.uploaderName ?: "Uploader Tidak Diketahui"
+                    val thumbnailUrl = extractor.thumbnails?.firstOrNull()?.url ?: ""
+                    
+                    // Mengambil stream audio & video
                     val audioStreams = extractor.audioStreams
                     val videoStreams = extractor.videoStreams
 
-                    val playableUrl = when {
-                        !audioStreams.isNullOrEmpty() -> audioStreams[0].url
-                        !videoStreams.isNullOrEmpty() -> videoStreams[0].url
-                        else -> null
-                    }
+                    val audioUrl = audioStreams?.firstOrNull()?.url ?: ""
+                    val videoUrl = videoStreams?.firstOrNull()?.url ?: ""
 
-                    if (playableUrl != null) {
+                    if (audioUrl.isNotEmpty() || videoUrl.isNotEmpty()) {
+                        // Mengemas data menjadi format JSON
+                        val jsonResponse = JSONObject().apply {
+                            put("title", title)
+                            put("uploader", uploader)
+                            put("thumbnail", thumbnailUrl)
+                            put("audioUrl", audioUrl)
+                            put("videoUrl", videoUrl)
+                        }.toString()
+
+                        val safeJson = jsonResponse.replace("'", "\\'")
+
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
+                            // Mengirim data JSON ke JavaScript di index.html
+                            webView.evaluateJavascript("javascript:onExtractionSuccess('$safeJson');", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onExtractionFailed('Format audio maupun video tidak dapat ditemukan.');", null)
+                            webView.evaluateJavascript("javascript:onExtractionFailed('Format media tidak dapat ditemukan.');", null)
                         }
                     }
                 } catch (e: Exception) {
