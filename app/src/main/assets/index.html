@@ -71,7 +71,7 @@
         .eq-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .eq-scroll::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-        /* --- STYLE TOMBOL PANDUAN DI FOOTER (SESUAI GAMBAR 1000706701.png) --- */
+        /* --- STYLE TOMBOL PANDUAN DI FOOTER --- */
         #guide-footer-btn {
             background-color: #06b6d4;
             color: #05070f;
@@ -114,7 +114,9 @@
                     
                     <div class="lcd-display rounded-xl p-3 h-14 flex-1 flex justify-between items-center px-4 font-mono">
                         <div>
-                            <div id="lcdPresetName" class="font-bold text-sm tracking-tight text-slate-100 flex items-center gap-1.5"></div>
+                            <div id="lcdPresetName" class="font-bold text-sm tracking-tight text-slate-100 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                            </div>
                             <div class="text-[10px] text-slate-500 tracking-wide mt-0.5 flex flex-wrap gap-1">
                                 <span>2-IN/2-OUT WITH</span>
                                 <span>XOVER COMPRESSOR LIMITER EQ DVC</span>
@@ -140,13 +142,13 @@
                         <button onclick="deletePreset()" class="bg-slate-900 hover:bg-red-950 hover:text-red-400 text-slate-400 text-[11px] font-medium px-2.5 py-2 rounded-md transition border border-slate-800">DEL</button>
                     </div>
                     
-                    <!-- KODE CONTROLLER BARU DENGAN SLOT paste LINK YOUTUBE -->
+                    <!-- CONTROLLER AUDIO: FILE LOKAL + LINK YOUTUBE -->
                     <div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80">
                         <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
-                            <!-- Tempat Input File Musik dari HP (Asli) -->
+                            <!-- Input File Lokal -->
                             <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-500 w-full file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-medium file:bg-slate-900 file:text-slate-300 hover:file:bg-slate-800 file:cursor-pointer">
 
-                            <!-- SLOT BARU: Tempat Paste Link YouTube -->
+                            <!-- Input Link YouTube -->
                             <div class="flex gap-1.5 items-center w-full sm:w-auto">
                                 <input type="text" id="ytUrlInput" placeholder="Paste YouTube Link..." class="bg-slate-900 border border-slate-800 text-[10px] text-slate-300 px-2 py-1 rounded-md focus:outline-none focus:border-cyan-500 flex-1 sm:w-48 font-mono">
                                 <button id="extractYtBtn" onclick="sendUrlToAndroid()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded transition whitespace-nowrap">EXTRACT</button>
@@ -154,7 +156,7 @@
                         </div>
 
                         <div class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800/60 shrink-0 w-full sm:w-72">
-                            <button id="playPauseBtn" class="bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16">PLAY</button>
+                            <button id="playPauseBtn" class="bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center">PLAY</button>
                             <span id="currentTimeDisplay" class="text-[10px] font-mono text-slate-500 w-8 text-right">0:00</span>
                             <input type="range" id="seekSlider" min="0" max="100" value="0" class="accent-cyan-500">
                             <span id="durationDisplay" class="text-[10px] font-mono text-slate-500 w-8">0:00</span>
@@ -331,27 +333,11 @@
                     <div class="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
                         <h4 class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">15-Band Parametric Equalizer</h4>
                         <div class="flex gap-2">
-                            <button id="eq-bypass-1" onclick="toggleEQBypass(1)" class="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded font-medium transition">BYPASS  OFF</button>
+                            <button id="eq-bypass-1" onclick="toggleEQBypass(1)" class="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded font-medium transition">BYPASS OFF</button>
                             <button onclick="resetEQ(1)" class="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-800 font-medium transition">RESET</button>
                         </div>
                     </div>
-                    <div class="space-y-1.5 max-h-36 overflow-y-auto eq-scroll pr-1.5 pt-1">
-                        <script>
-                            const freqsList = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
-                            const generateEQControls = (ch) => {
-                                freqsList.forEach((f, idx) => {
-                                    let fStr = f >= 1000 ? (f/1000).toFixed(1) + " kHz" : f + " Hz";
-                                    document.write(`
-                                        <div class="flex items-center justify-between text-[10px] font-mono py-0.5 border-b border-slate-900/40 last:border-0">
-                                            <span class="w-14 text-slate-500 font-medium">${fStr}</span>
-                                            <input type="range" id="eq-${ch}-${idx}" min="-12" max="12" value="0" class="flex-1 mx-2">
-                                            <span id="eq-lbl-${ch}-${idx}" class="w-10 text-right text-slate-400 font-semibold">0dB</span>
-                                        </div>
-                                    `);
-                                });
-                            }; generateEQControls(1);
-                        </script>
-                    </div>
+                    <div id="eq-container-1" class="space-y-1.5 max-h-36 overflow-y-auto eq-scroll pr-1.5 pt-1"></div>
                 </div>
             </div>
 
@@ -492,18 +478,16 @@
                             <button onclick="resetEQ(2)" class="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-800 font-medium transition">RESET</button>
                         </div>
                     </div>
-                    <div class="space-y-1.5 max-h-36 overflow-y-auto eq-scroll pr-1.5 pt-1">
-                        <script>generateEQControls(2);</script>
-                    </div>
+                    <div id="eq-container-2" class="space-y-1.5 max-h-36 overflow-y-auto eq-scroll pr-1.5 pt-1"></div>
                 </div>
             </div>
         </div>
 
         <!-- FOOTER DENGAN TOMBOL LINK LUAR MANDIRI -->
         <footer class="flex flex-col items-center justify-center text-center text-slate-600 text-[10px] font-mono pt-4 border-t border-slate-900/60 pb-4">
-             <div>AUDIO LOGIC DP 220  |  Audio Processing Engine • Powered by DW PROJECT</div>
+             <div>AUDIO LOGIC DSP 220  |  Audio Processing Engine • Powered by DW PROJECT</div>
              
-             <!-- MASUKKAN URL PANDUAN LUAR ANDA PADA ATRIBUT href DI BAWAH INI -->
+             <!-- URL PANDUAN EXTERNAL -->
              <a href="https://userguidedsp.netlify.app/" target="_blank" rel="noopener noreferrer" id="guide-footer-btn">
                 <span class="text-red-500 font-extrabold text-sm font-sans">?</span> PANDUAN DLMS
              </a>
@@ -515,6 +499,27 @@
         const chartFreqs = ['20Hz', '50Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
         const eqFrequencies = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
         
+        // Dynamic EQ Control UI Generation (Modern DOM Method)
+        function renderEQControls(ch) {
+            const container = document.getElementById(`eq-container-${ch}`);
+            if (!container) return;
+            let html = '';
+            eqFrequencies.forEach((f, idx) => {
+                let fStr = f >= 1000 ? (f / 1000).toFixed(1) + " kHz" : f + " Hz";
+                html += `
+                    <div class="flex items-center justify-between text-[10px] font-mono py-0.5 border-b border-slate-900/40 last:border-0">
+                        <span class="w-14 text-slate-500 font-medium">${fStr}</span>
+                        <input type="range" id="eq-${ch}-${idx}" min="-12" max="12" value="0" class="flex-1 mx-2">
+                        <span id="eq-lbl-${ch}-${idx}" class="w-10 text-right text-slate-400 font-semibold">0dB</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        renderEQControls(1);
+        renderEQControls(2);
+
         Chart.defaults.color = '#64748b';
         Chart.defaults.font.family = 'JetBrains Mono, monospace';
         Chart.defaults.font.size = 9;
@@ -835,9 +840,16 @@
             document.getElementById('limit-t-lbl-2').innerText = limitT2 + " dB";
 
             for(let i=0; i<15; i++) {
-                const g1 = parseFloat(document.getElementById(`eq-1-${i}`).value); const g2 = parseFloat(document.getElementById(`eq-2-${i}`).value);
-                document.getElementById(`eq-lbl-1-${i}`).innerText = (g1 > 0 ? "+" : "") + g1 + "dB";
-                document.getElementById(`eq-lbl-2-${i}`).innerText = (g2 > 0 ? "+" : "") + g2 + "dB";
+                const el1 = document.getElementById(`eq-1-${i}`);
+                const el2 = document.getElementById(`eq-2-${i}`);
+                if (el1) {
+                    const g1 = parseFloat(el1.value);
+                    document.getElementById(`eq-lbl-1-${i}`).innerText = (g1 > 0 ? "+" : "") + g1 + "dB";
+                }
+                if (el2) {
+                    const g2 = parseFloat(el2.value);
+                    document.getElementById(`eq-lbl-2-${i}`).innerText = (g2 > 0 ? "+" : "") + g2 + "dB";
+                }
             }
 
             let protectedVol1 = vol1; let protectedVol2 = vol2;
@@ -890,8 +902,10 @@
             limiters.ch2.threshold.setValueAtTime(dynamicLimit2, audioCtx.currentTime);
 
             for(let i=0; i<15; i++) {
-                let g1 = eqBypassed.ch1 ? 0 : parseFloat(document.getElementById(`eq-1-${i}`).value);
-                let g2 = eqBypassed.ch2 ? 0 : parseFloat(document.getElementById(`eq-2-${i}`).value);
+                const el1 = document.getElementById(`eq-1-${i}`);
+                const el2 = document.getElementById(`eq-2-${i}`);
+                let g1 = (eqBypassed.ch1 || !el1) ? 0 : parseFloat(el1.value);
+                let g2 = (eqBypassed.ch2 || !el2) ? 0 : parseFloat(el2.value);
                 filters.ch1_eq[i].gain.setValueAtTime(g1, audioCtx.currentTime);
                 filters.ch2_eq[i].gain.setValueAtTime(g2, audioCtx.currentTime);
             }
@@ -927,7 +941,10 @@
             if (eqBypassed[`ch${channel}`]) return 0;
             let totalInfluence = 0;
             for(let i=0; i<15; i++) {
-                const gain = parseFloat(document.getElementById(`eq-${channel}-${i}`).value); const fc = eqFrequencies[i]; const distance = Math.abs(Math.log10(f / fc));
+                const el = document.getElementById(`eq-${channel}-${i}`);
+                const gain = el ? parseFloat(el.value) : 0; 
+                const fc = eqFrequencies[i]; 
+                const distance = Math.abs(Math.log10(f / fc));
                 if (distance < 0.25) totalInfluence += gain * (1 - (distance / 0.25));
             }
             return totalInfluence;
