@@ -2,7 +2,6 @@ package com.dsp220.pro
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -43,6 +42,7 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
+            // Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
@@ -105,96 +105,33 @@ class MainActivity : AppCompatActivity() {
 
     inner class AndroidBridge {
 
-        // --- PEMUTARAN AUDIO LATAR BELAKANG (NATIVE) ---
+        // --- FITUR BARU: Menjalankan Background Playback Service ---
         @JavascriptInterface
-        fun playAudioNative(url: String) {
-            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
-                action = PlaybackService.ACTION_PLAY
-                putExtra(PlaybackService.EXTRA_URL, url)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-        }
-
-        @JavascriptInterface
-        fun pauseAudioNative() {
-            sendIntentToService(PlaybackService.ACTION_PAUSE)
-        }
-
-        @JavascriptInterface
-        fun resumeAudioNative() {
-            sendIntentToService(PlaybackService.ACTION_RESUME)
-        }
-
-        @JavascriptInterface
-        fun stopAudioNative() {
-            sendIntentToService(PlaybackService.ACTION_STOP)
-        }
-
-        // --- KONTROL DLMS / DSP NATIVE VIA JAVASCRIPT ---
-
-        @JavascriptInterface
-        fun setGainNative(gainDb: Float) {
-            sendIntentToService(PlaybackService.ACTION_SET_GAIN) {
-                putExtra("GAIN", gainDb)
+        fun startBackgroundService() {
+            try {
+                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
 
+        // --- FITUR BARU: Menghentikan Background Playback Service ---
         @JavascriptInterface
-        fun setEqBandNative(bandIndex: Int, gainDb: Float) {
-            sendIntentToService(PlaybackService.ACTION_SET_EQ_BAND) {
-                putExtra("BAND_INDEX", bandIndex)
-                putExtra("BAND_GAIN", gainDb)
+        fun stopBackgroundService() {
+            try {
+                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
+                stopService(serviceIntent)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
 
-        @JavascriptInterface
-        fun setShelfNative(type: String, frequency: Float, gainDb: Float) {
-            sendIntentToService("com.dsp220.pro.SET_SHELF") {
-                putExtra("SHELF_TYPE", type)
-                putExtra("FREQ", frequency)
-                putExtra("GAIN", gainDb)
-            }
-        }
-
-        @JavascriptInterface
-        fun setXoverNative(type: String, frequency: Float, cutoffType: String) {
-            sendIntentToService("com.dsp220.pro.SET_XOVER") {
-                putExtra("XOVER_TYPE", type)
-                putExtra("FREQ", frequency)
-                putExtra("CUTOFF_TYPE", cutoffType)
-            }
-        }
-
-        @JavascriptInterface
-        fun setCompressorNative(thresholdDb: Float, ratio: Float, attackMs: Float, releaseMs: Float) {
-            sendIntentToService("com.dsp220.pro.SET_COMPRESSOR") {
-                putExtra("THRESHOLD", thresholdDb)
-                putExtra("RATIO", ratio)
-                putExtra("ATTACK", attackMs)
-                putExtra("RELEASE", releaseMs)
-            }
-        }
-
-        @JavascriptInterface
-        fun setLimiterNative(thresholdDb: Float) {
-            sendIntentToService(PlaybackService.ACTION_SET_LIMITER) {
-                putExtra("THRESHOLD", thresholdDb)
-            }
-        }
-
-        @JavascriptInterface
-        fun setDelayNative(channel: Int, delayMs: Float) {
-            sendIntentToService("com.dsp220.pro.SET_DELAY") {
-                putExtra("CHANNEL", channel)
-                putExtra("DELAY_MS", delayMs)
-            }
-        }
-
-        // --- EKSTRAKSI YOUTUBE ---
+        // --- FUNGSI ASLI UNTUK EKSTRAKSI YOUTUBE ---
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -213,33 +150,20 @@ class MainActivity : AppCompatActivity() {
 
                     if (playableUrl != null) {
                         runOnUiThread {
-                            webView.evaluateJavascript("onAudioExtracted('$playableUrl')", null)
+                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("onExtractionFailed('Format audio maupun video tidak dapat ditemukan.')", null)
+                            webView.evaluateJavascript("javascript:onExtractionFailed('Format audio maupun video tidak dapat ditemukan.');", null)
                         }
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        // Sanitasi karakter agar JavaScript tidak error (SyntaxError) akibat newline/quote
-                        val errorClean = (e.message ?: e.toString())
-                            .replace("\\", "\\\\")
-                            .replace("'", "\\'")
-                            .replace("\n", " ")
-                        webView.evaluateJavascript("onExtractionFailed('$errorClean')", null)
+                        val errorClean = e.toString().replace("'", "\\'") 
+                        webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
                 }
             }.start()
-        }
-
-        // Fungsi pembantu agar pengiriman intent dari AndroidBridge ke PlaybackService lebih ringkas
-        private fun sendIntentToService(actionName: String, extras: (Intent.() -> Unit)? = null) {
-            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
-                action = actionName
-                extras?.invoke(this)
-            }
-            startService(intent)
         }
     }
 }
