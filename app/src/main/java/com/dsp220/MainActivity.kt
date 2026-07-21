@@ -130,7 +130,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        val errorClean = e.toString().replace("'", "\\'") 
+                        // Perbaikan Safe Call ?. dan penanganan e.message
+                        val errorMessage = e.localizedMessage ?: e.message ?: "Unknown error"
+                        val errorClean = errorMessage.replace("'", "\\'") 
                         webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
                 }
