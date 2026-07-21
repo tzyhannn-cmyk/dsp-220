@@ -24,11 +24,8 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-
-    // Callback untuk pemilih file lokal dari WebView
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
-    // Launcher untuk menangani jendela pemilih file Android
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val results = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
@@ -65,7 +62,6 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = WebViewClient()
 
-        // PEMBARUAN: WebChromeClient didukung penuh untuk File Picker lokal
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView?,
@@ -95,7 +91,8 @@ class MainActivity : AppCompatActivity() {
             NewPipe.init(object : Downloader() {
                 override fun execute(request: Request): Response {
                     val connection = URL(request.url()).openConnection() as HttpURLConnection
-                    
+                    connection.instanceFollowRedirects = true // 1. Pastikan mengikut pengalihan URL
+
                     val method = request.httpMethod() ?: "GET"
                     connection.requestMethod = method
                     
@@ -123,8 +120,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     
                     val responseCodeValue = connection.responseCode
-                    val responseMessage = connection.responseMessage
-                    val responseHeaders = connection.headerFields
+                    val responseMessage = connection.responseMessage ?: ""
+                    
+                    // 2. PERBAIKAN KRITIS: Filter key null agar NewPipeExtractor tidak melempar NullPointerException
+                    val responseHeaders = connection.headerFields.filterKeys { it != null }
                     
                     val responseBody = try {
                         connection.inputStream.bufferedReader().use { it.readText() }
@@ -142,7 +141,6 @@ class MainActivity : AppCompatActivity() {
 
     inner class AndroidBridge {
 
-        // FITUR BARU 1: Menjalankan PlaybackService untuk pemutaran latar belakang
         @JavascriptInterface
         fun startBackgroundService() {
             val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
@@ -153,7 +151,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // FITUR BARU 2: Mengekstrak metadata lengkap + URL Audio & Video
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -161,12 +158,10 @@ class MainActivity : AppCompatActivity() {
                     val extractor = ServiceList.YouTube.getStreamExtractor(url)
                     extractor.fetchPage()
                     
-                    // Mengambil metadata informasi lagu
                     val title = extractor.name ?: "Judul Tidak Diketahui"
                     val uploader = extractor.uploaderName ?: "Uploader Tidak Diketahui"
                     val thumbnailUrl = extractor.thumbnails?.firstOrNull()?.url ?: ""
                     
-                    // Mengambil stream audio & video
                     val audioStreams = extractor.audioStreams
                     val videoStreams = extractor.videoStreams
 
@@ -174,7 +169,6 @@ class MainActivity : AppCompatActivity() {
                     val videoUrl = videoStreams?.firstOrNull()?.url ?: ""
 
                     if (audioUrl.isNotEmpty() || videoUrl.isNotEmpty()) {
-                        // Mengemas data menjadi format JSON
                         val jsonResponse = JSONObject().apply {
                             put("title", title)
                             put("uploader", uploader)
@@ -183,21 +177,21 @@ class MainActivity : AppCompatActivity() {
                             put("videoUrl", videoUrl)
                         }.toString()
 
-                        val safeJson = jsonResponse.replace("'", "\\'")
-
                         runOnUiThread {
-                            // Mengirim data JSON ke JavaScript di index.html
-                            webView.evaluateJavascript("javascript:onExtractionSuccess('$safeJson');", null)
+                            // 3. PERBAIKAN KRITIS: Oper JSON secara langsung tanpa pembungkus petik tunggal '...'
+                            webView.evaluateJavascript("onExtractionSuccess($jsonResponse);", null)
                         }
                     } else {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onExtractionFailed('Format media tidak dapat ditemukan.');", null)
+                            webView.evaluateJavascript("onExtractionFailed('Format media tidak dapat ditemukan.');", null)
                         }
                     }
                 } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Sanitisasi pesan error agar aman dipasing ke JS
+                    val safeErrorMsg = JSONObject.quote(e.localizedMessage ?: e.toString())
                     runOnUiThread {
-                        val errorClean = e.toString().replace("'", "\\'") 
-                        webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
+                        webView.evaluateJavascript("onExtractionFailed($safeErrorMsg);", null)
                     }
                 }
             }.start()
