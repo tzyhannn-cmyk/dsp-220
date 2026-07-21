@@ -1,4 +1,4 @@
-package com.dsp220.pro
+package com.dsp220
 
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -130,7 +130,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        // Perbaikan Safe Call ?. dan penanganan e.message
                         val errorMessage = e.localizedMessage ?: e.message ?: "Unknown error"
                         val errorClean = errorMessage.replace("'", "\\'") 
                         webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
