@@ -146,7 +146,9 @@
                     <div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80">
                         <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
                             <!-- Input File Lokal -->
-                            <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-500 w-full file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-medium file:bg-slate-900 file:text-slate-300 hover:file:bg-slate-800 file:cursor-pointer">
+                            <div class="flex items-center gap-1.5 w-full sm:w-auto">
+                                <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-400 w-full file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-semibold file:bg-slate-900 file:text-cyan-400 hover:file:bg-slate-800 file:cursor-pointer cursor-pointer">
+                            </div>
 
                             <!-- Input Link YouTube -->
                             <div class="flex gap-1.5 items-center w-full sm:w-auto">
@@ -582,13 +584,19 @@
         }
 
         playPauseBtn.addEventListener('click', () => {
-            if (!audioEl.src) return;
+            if (!audioEl.src) {
+                alert("Pilih file lagu lokal atau masukkan link YouTube terlebih dahulu!");
+                return;
+            }
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             
             if (audioEl.paused) {
-                audioEl.play();
-                playPauseBtn.innerText = "PAUSE";
-                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+                audioEl.play().then(() => {
+                    playPauseBtn.innerText = "PAUSE";
+                    playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+                }).catch(err => {
+                    console.error("Gagal pemutaran audio:", err);
+                });
             } else {
                 audioEl.pause();
                 playPauseBtn.innerText = "PLAY";
@@ -694,23 +702,34 @@
             drawHardwareVUMeters(); drawRealTimeSpectrum(); updateHardwareDSP();
         }
 
+        /* --- LOGIKA IMPOR FILE AUDIO LOKAL (SUDAH DIPERBAIKI) --- */
+        fileInput.addEventListener('click', function() {
+            this.value = null; // Reset value agar file yang sama bisa dipilih ulang
+        });
+
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 initAudioEngine(); 
-                audioEl.crossOrigin = null; 
+                
+                // Hapus atribut CORS yang memblokir Blob URL lokal
+                audioEl.removeAttribute('crossorigin'); 
                 audioEl.src = URL.createObjectURL(file);
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                audioEl.play();
-                playPauseBtn.innerText = "PAUSE";
-                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                
+                audioEl.play().then(() => {
+                    playPauseBtn.innerText = "PAUSE";
+                    playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+                }).catch(err => {
+                    console.error("Autoplay lokal terhalang browser:", err);
+                });
             }
         });
 
-        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE (UPDATED) --- */
+        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE --- */
         let extractionTimeout = null;
 
-        // Normalisasi URL YouTube (Mendukung format youtu.be, shorts, & watch?v=)
         function normalizeYouTubeUrl(url) {
             try {
                 let videoId = "";
@@ -752,7 +771,6 @@
                 extractBtn.disabled = true;
                 extractBtn.classList.add("opacity-60", "cursor-not-allowed");
 
-                // Timeout 30 Detik jika Native Android tidak merespon
                 clearTimeout(extractionTimeout);
                 extractionTimeout = setTimeout(() => {
                     resetExtractButton();
@@ -769,11 +787,10 @@
             resetExtractButton();
             initAudioEngine(); 
             
-            // Konfigurasi CORS agar WebAudio DSP bisa memproses stream audio
             audioEl.crossOrigin = "anonymous";
             audioEl.src = audioUrl;
 
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             
             audioEl.play().then(() => {
                 playPauseBtn.innerText = "PAUSE";
