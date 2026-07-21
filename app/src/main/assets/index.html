@@ -8,8 +8,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #05070f; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #05070f; 
+        }
+        .font-mono { 
+            font-family: 'JetBrains Mono', monospace; 
+        }
         
         /* Modern OLED Display Style */
         .lcd-display {
@@ -18,7 +23,7 @@
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.9);
         }
 
-        /* --- MODERN MINIMALIST SLIDER STYLE --- */
+        /* Modern Minimalist Slider Style */
         input[type=range] {
             -webkit-appearance: none;
             background: #1e293b;   
@@ -51,8 +56,12 @@
         }
 
         input[type=range]::-moz-range-thumb {
-            height: 12px; width: 12px; border-radius: 50%; background: #ffffff;
-            cursor: pointer; border: 2px solid #05070f;
+            height: 12px; 
+            width: 12px; 
+            border-radius: 50%; 
+            background: #ffffff;
+            cursor: pointer; 
+            border: 2px solid #05070f;
         }
 
         #seekSlider { height: 3px !important; }
@@ -71,7 +80,7 @@
         .eq-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .eq-scroll::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-        /* --- STYLE TOMBOL PANDUAN DI FOOTER --- */
+        /* Style Tombol Panduan */
         #guide-footer-btn {
             background-color: #06b6d4;
             color: #05070f;
@@ -208,7 +217,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-800 flex items-center justify-center text-cyan-400 font-bold font-mono text-sm shadow-inner">01</div>
                         <div class="space-y-1">
-                            <h3 class="text-sm font-bold text-white tracking-tight uppercase">Low / Subwoofer </h3>
+                            <h3 class="text-sm font-bold text-white tracking-tight uppercase">Low / Subwoofer</h3>
                             <div class="flex items-center gap-1 font-mono text-[9px] bg-slate-950 p-1 rounded-md border border-slate-800">
                                 <span class="text-slate-600 font-bold px-1">IN:</span>
                                 <select id="route-ch1" class="hidden">
@@ -349,7 +358,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-pink-950/80 border border-pink-800 flex items-center justify-center text-pink-400 font-bold font-mono text-sm shadow-inner">02</div>
                         <div class="space-y-1">
-                            <h3 class="text-sm font-bold text-white tracking-tight uppercase">High / Mid-Hi </h3>
+                            <h3 class="text-sm font-bold text-white tracking-tight uppercase">High / Mid-Hi</h3>
                             <div class="flex items-center gap-1 font-mono text-[9px] bg-slate-950 p-1 rounded-md border border-slate-800">
                                 <span class="text-slate-600 font-bold px-1">IN:</span>
                                 <select id="route-ch2" class="hidden">
@@ -485,9 +494,9 @@
             </div>
         </div>
 
-        <!-- FOOTER DENGAN TOMBOL LINK LUAR MANDIRI -->
+        <!-- FOOTER DENGAN TOMBOL LINK PANDUAN -->
         <footer class="flex flex-col items-center justify-center text-center text-slate-600 text-[10px] font-mono pt-4 border-t border-slate-900/60 pb-4">
-             <div>AUDIO LOGIC DSP 220  |  Audio Processing Engine • Powered by DW PROJECT</div>
+             <div>AUDIO LOGIC DSP 220 | Audio Processing Engine • Powered by DW PROJECT</div>
              
              <!-- URL PANDUAN EXTERNAL -->
              <a href="https://userguidedsp.netlify.app/" target="_blank" rel="noopener noreferrer" id="guide-footer-btn">
@@ -496,12 +505,12 @@
         </footer>
     </div>
 
-    <!-- REENGINEERED JAVASCRIPT AUDIO ENGINE -->
+    <!-- JAVASCRIPT AUDIO ENGINE & SYSTEM CONTROL -->
     <script>
         const chartFreqs = ['20Hz', '50Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
         const eqFrequencies = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
         
-        // Dynamic EQ Control UI Generation
+        // Generate Kontrol UI EQ Parametrik
         function renderEQControls(ch) {
             const container = document.getElementById(`eq-container-${ch}`);
             if (!container) return;
@@ -702,7 +711,7 @@
             drawHardwareVUMeters(); drawRealTimeSpectrum(); updateHardwareDSP();
         }
 
-        /* --- LOGIKA IMPOR FILE AUDIO LOKAL (SUDAH DIPERBAIKI) --- */
+        /* --- LOGIKA IMPOR FILE AUDIO LOKAL --- */
         fileInput.addEventListener('click', function() {
             this.value = null; // Reset value agar file yang sama bisa dipilih ulang
         });
@@ -711,8 +720,6 @@
             const file = e.target.files[0];
             if (file) {
                 initAudioEngine(); 
-                
-                // Hapus atribut CORS yang memblokir Blob URL lokal
                 audioEl.removeAttribute('crossorigin'); 
                 audioEl.src = URL.createObjectURL(file);
 
