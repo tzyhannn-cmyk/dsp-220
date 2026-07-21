@@ -2,6 +2,7 @@ package com.dsp220.pro
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -42,7 +43,6 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
-            // Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
@@ -105,33 +105,45 @@ class MainActivity : AppCompatActivity() {
 
     inner class AndroidBridge {
 
-        // --- FITUR BARU: Menjalankan Background Playback Service ---
+        // --- PEMUTARAN AUDIO LATAR BELAKANG (NATIVE) ---
         @JavascriptInterface
-        fun startBackgroundService() {
-            try {
-                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        fun playAudioNative(url: String) {
+            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
+                action = PlaybackService.ACTION_PLAY
+                putExtra(PlaybackService.EXTRA_URL, url)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
             }
         }
 
-        // --- FITUR BARU: Menghentikan Background Playback Service ---
         @JavascriptInterface
-        fun stopBackgroundService() {
-            try {
-                val serviceIntent = Intent(this@MainActivity, PlaybackService::class.java)
-                stopService(serviceIntent)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        fun pauseAudioNative() {
+            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
+                action = PlaybackService.ACTION_PAUSE
             }
+            startService(intent)
         }
 
-        // --- FUNGSI ASLI UNTUK EKSTRAKSI YOUTUBE ---
+        @JavascriptInterface
+        fun resumeAudioNative() {
+            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
+                action = PlaybackService.ACTION_RESUME
+            }
+            startService(intent)
+        }
+
+        @JavascriptInterface
+        fun stopAudioNative() {
+            val intent = Intent(this@MainActivity, PlaybackService::class.java).apply {
+                action = PlaybackService.ACTION_STOP
+            }
+            startService(intent)
+        }
+
+        // --- EKSTRAKSI YOUTUBE ASLI MILIK ANDA (TETAP SAMA 100%) ---
         @JavascriptInterface
         fun extractYouTubeAudio(url: String) {
             Thread {
@@ -167,3 +179,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
