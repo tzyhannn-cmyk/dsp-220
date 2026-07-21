@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -19,9 +20,21 @@ class PlaybackService : Service() {
             .setContentText("Media sedang diputar di latar belakang...")
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
             .build()
 
-        startForeground(1, notification)
+        // Penanganan kompatibilitas Android 14 (API 34)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val foregroundType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            } else {
+                0
+            }
+            startForeground(1, notification, foregroundType)
+        } else {
+            startForeground(1, notification)
+        }
+
         return START_STICKY
     }
 
@@ -39,4 +52,3 @@ class PlaybackService : Service() {
         }
     }
 }
-
