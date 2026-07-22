@@ -1,11 +1,10 @@
-package com.dsp220
+package com.dsp220.pro
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
+import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -14,7 +13,6 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
-import org.schabi.newpipe.extractor.localization.Localization
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -26,88 +24,82 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Buka WebView terlebih dahulu agar UI tidak kosong/crash jika NewPipe gagal
-        try {
-            webView = WebView(this)
-            setContentView(webView)
+        initNewPipeExtractor()
 
-            webView.settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                mediaPlaybackRequiresUserGesture = false 
-                
-                allowFileAccess = true
-                allowContentAccess = true
-                @Suppress("DEPRECATION")
-                allowFileAccessFromFileURLs = true
-                @Suppress("DEPRECATION")
-                allowUniversalAccessFromFileURLs = true
-                
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            }
+        webView = WebView(this)
+        setContentView(webView)
 
-            webView.webViewClient = WebViewClient()
-            webView.webChromeClient = WebChromeClient() 
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            mediaPlaybackRequiresUserGesture = false 
             
-            webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
-            webView.loadUrl("file:///android_asset/index.html")
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Gagal menginisialisasi WebView: ${e.message}")
+            allowFileAccess = true
+            allowContentAccess = true
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
+            
+            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
-        // Inisialisasi NewPipeExtractor secara aman
-        try {
-            initNewPipeExtractor()
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Gagal menginisialisasi NewPipe: ${e.message}")
-        }
+        webView.webViewClient = WebViewClient()
+        webView.webChromeClient = WebChromeClient() 
+        
+        webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
+        webView.loadUrl("file:///android_asset/index.html")
     }
 
     private fun initNewPipeExtractor() {
-        // Set Localization default (PENTING agar NewPipeExtractor tidak crash saat dipanggil)
-        NewPipe.init(object : Downloader() {
-            override fun execute(request: Request): Response {
-                val connection = URL(request.url()).openConnection() as HttpURLConnection
-                
-                val method = request.httpMethod() ?: "GET"
-                connection.requestMethod = method
-                
-                request.headers().forEach { (key, values) ->
-                    if (!key.equals("Accept-Encoding", ignoreCase = true)) {
-                        if (key.equals("Cookie", ignoreCase = true)) {
-                            connection.setRequestProperty(key, values.joinToString("; "))
-                        } else {
-                            values.forEach { value ->
-                                connection.addRequestProperty(key, value)
+        try {
+            NewPipe.init(object : Downloader() {
+                override fun execute(request: Request): Response {
+                    val connection = URL(request.url()).openConnection() as HttpURLConnection
+                    
+                    val method = request.httpMethod() ?: "GET"
+                    connection.requestMethod = method
+                    
+                    request.headers().forEach { (key, values) ->
+                        if (!key.equals("Accept-Encoding", ignoreCase = true)) {
+                            if (key.equals("Cookie", ignoreCase = true)) {
+                                connection.setRequestProperty(key, values.joinToString("; "))
+                            } else {
+                                values.forEach { value ->
+                                    connection.addRequestProperty(key, value)
+                                }
                             }
                         }
                     }
-                }
-                
-                if (connection.getRequestProperty("User-Agent") == null) {
-                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                }
-                
-                if (method == "POST" && request.dataToSend() != null) {
-                    connection.doOutput = true
-                    connection.outputStream.use { os ->
-                        os.write(request.dataToSend())
+                    
+                    if (connection.getRequestProperty("User-Agent") == null) {
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     }
+                    
+                    if (method == "POST" && request.dataToSend() != null) {
+                        connection.doOutput = true
+                        connection.outputStream.use { os ->
+                            os.write(request.dataToSend())
+                        }
+                    }
+                    
+                    val responseCodeValue = connection.responseCode
+                    val responseMessage = connection.responseMessage
+                    val responseHeaders = connection.headerFields
+                    
+                    val responseBody = try {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } catch (e: Exception) {
+                        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    }
+                    
+                    return Response(responseCodeValue, responseMessage, responseHeaders, responseBody, request.url())
                 }
-                
-                val responseCodeValue = connection.responseCode
-                val responseMessage = connection.responseMessage
-                val responseHeaders = connection.headerFields
-                
-                val responseBody = try {
-                    connection.inputStream.bufferedReader().use { it.readText() }
-                } catch (e: Exception) {
-                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                }
-                
-                return Response(responseCodeValue, responseMessage, responseHeaders, responseBody, request.url())
-            }
-        }, Localization.fromLocale(java.util.Locale.ENGLISH))
+            })
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     inner class AndroidBridge {
@@ -121,12 +113,15 @@ class MainActivity : AppCompatActivity() {
                     val audioStreams = extractor.audioStreams
                     val videoStreams = extractor.videoStreams
 
-                    val audioUrl = if (!audioStreams.isNullOrEmpty()) audioStreams[0].url else ""
-                    val videoUrl = if (!videoStreams.isNullOrEmpty()) videoStreams[0].url else ""
+                    val playableUrl = when {
+                        !audioStreams.isNullOrEmpty() -> audioStreams[0].url
+                        !videoStreams.isNullOrEmpty() -> videoStreams[0].url
+                        else -> null
+                    }
 
-                    if (!audioUrl.isNullOrEmpty() || !videoUrl.isNullOrEmpty()) {
+                    if (playableUrl != null) {
                         runOnUiThread {
-                            webView.evaluateJavascript("javascript:onMediaExtracted('$audioUrl', '$videoUrl');", null)
+                            webView.evaluateJavascript("javascript:onAudioExtracted('$playableUrl');", null)
                         }
                     } else {
                         runOnUiThread {
@@ -135,8 +130,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        val errorMessage = e.localizedMessage ?: e.message ?: "Unknown error"
-                        val errorClean = errorMessage.replace("'", "\\'") 
+                        val errorClean = e.toString().replace("'", "\\'") 
                         webView.evaluateJavascript("javascript:onExtractionFailed('$errorClean');", null)
                     }
                 }
