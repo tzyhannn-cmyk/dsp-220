@@ -1,10 +1,12 @@
 package com.dsp220.pro
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -41,7 +43,6 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
-            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
@@ -135,6 +136,28 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }.start()
+        }
+
+        // --- Tambahan: Fungsi ExoPlayer Native untuk Latar Belakang ---
+        @JavascriptInterface
+        fun playAudioNative(streamUrl: String, title: String) {
+            val intent = Intent(this@MainActivity, AudioService::class.java).apply {
+                putExtra("EXTRA_URL", streamUrl)
+                putExtra("EXTRA_TITLE", title)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
+
+        @JavascriptInterface
+        fun stopAudioNative() {
+            val intent = Intent(this@MainActivity, AudioService::class.java).apply {
+                action = "ACTION_STOP"
+            }
+            startService(intent)
         }
     }
 }
