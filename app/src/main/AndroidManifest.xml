@@ -1,26 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- IZIN AKSES INTERNET & JARINGAN -->
+    <!-- Izin Akses Internet & Service Latar Belakang -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- IZIN PEMUTARAN LATAR BELAKANG (BACKGROUND PLAYBACK) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
+        android:icon="@android:drawable/sym_def_app_icon"
         android:label="DSP 220 PRO"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
-        android:usesCleartextTraffic="true">
-        
-        <!-- MENCEGAH APK TER-RESET SAAT LAYAR DIPUTAR -->
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,11 +24,12 @@
             </intent-filter>
         </activity>
 
-        <!-- PENDAFTARAN SERVICE UNTUK LATAR BELAKANG -->
-        <service 
-            android:name=".PlaybackService" 
-            android:foregroundServiceType="mediaPlayback"
-            android:exported="false" />
+        <!-- Service Pemutar Musik Latar Belakang -->
+        <service
+            android:name=".AudioService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
     </application>
 
