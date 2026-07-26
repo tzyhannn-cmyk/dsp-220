@@ -146,11 +146,14 @@
                             <!-- Input File Musik Lokal -->
                             <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-500 w-full file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-medium file:bg-slate-900 file:text-slate-300 hover:file:bg-slate-800 file:cursor-pointer">
 
-                            <!-- Paste Link YouTube -->
+                            <!-- ================================================================= -->
+                            <!-- [ANDROID BRIDGE] INPUT & TOMBOL EXTRACT YOUTUBE DI BAWAH INI      -->
+                            <!-- ================================================================= -->
                             <div class="flex gap-1.5 items-center w-full sm:w-auto">
                                 <input type="text" id="ytUrlInput" placeholder="Paste YouTube Link..." class="bg-slate-900 border border-slate-800 text-[10px] text-slate-300 px-2 py-1 rounded-md focus:outline-none focus:border-cyan-500 flex-1 sm:w-48 font-mono">
                                 <button id="extractYtBtn" onclick="sendUrlToAndroid()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded transition whitespace-nowrap">EXTRACT</button>
                             </div>
+                            <!-- ================================================================= -->
                         </div>
 
                         <div class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800/60 shrink-0 w-full sm:w-72">
@@ -699,19 +702,26 @@
             }
         });
 
-        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE --- */
+        /* ========================================================================================= */
+        /* [ANDROID BRIDGE LOGIC] FUNGSI UTAMA KOMUNIKASI WEB <-> ANDROID (YOUTUBE EXTRACTOR)        */
+        /* ========================================================================================= */
+
+        // 1. Mengirim URL YouTube dari Web UI ke aplikasi Android Native
         function sendUrlToAndroid() {
             const url = document.getElementById('ytUrlInput').value;
             if (!url) return alert('Masukkan link YouTube terlebih dahulu!');
 
+            // Mengecek apakah berjalan di dalam WebView Android yang memasang object 'AndroidBridge'
             if (window.AndroidBridge) {
                 document.getElementById('extractYtBtn').innerText = "EXTRACTING...";
+                // Memanggil method Java/Kotlin: @JavascriptInterface public void extractYouTubeAudio(String url)
                 window.AndroidBridge.extractYouTubeAudio(url);
             } else {
                 alert("Fitur ekstraksi hanya berfungsi di dalam aplikasi Android.");
             }
         }
 
+        // 2. Callback yang dipanggil oleh Android Native saat proses ekstraksi audio berhasil
         function onAudioExtracted(audioUrl) {
             document.getElementById('extractYtBtn').innerText = "EXTRACT";
             initAudioEngine(); 
@@ -722,10 +732,13 @@
             playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
         }
 
+        // 3. Callback yang dipanggil oleh Android Native saat ekstraksi gagal
         function onExtractionFailed(errorMsg) {
             document.getElementById('extractYtBtn').innerText = "EXTRACT";
             alert("Ekstraksi Gagal: " + errorMsg);
         }
+
+        /* ========================================================================================= */
 
         function toggleDVC() {
             dvcEnabled = !dvcEnabled;
@@ -1128,7 +1141,6 @@
             updateHardwareDSP();
         }
 
-        /* --- MENYELESAIKAN FUNGSI TOGGLE PHASE --- */
         function togglePhase(ch) {
             phases[`ch${ch}`] = !phases[`ch${ch}`]; 
             const btn = document.getElementById(`phase-ch${ch}`);
