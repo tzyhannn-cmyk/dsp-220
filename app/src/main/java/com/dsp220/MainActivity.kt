@@ -1,23 +1,13 @@
 package com.dsp220.pro
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
+import android.webkit.WebSettings // PEMBARUAN: Import library pengaturan web
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -30,38 +20,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
 
-    // --- Tambahan untuk Koneksi ke AudioService (Kontrol DSP) ---
-    private var audioService: AudioService? = null
-    private var isBound = false
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as AudioService.LocalBinder
-            audioService = binder.getService()
-            isBound = true
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
-            audioService = null
-        }
-    }
-
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // --- MINTA IZIN NOTIFIKASI (Khusus Android 13+) ---
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this, 
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS), 
-                    101
-                )
-            }
-        }
 
         initNewPipeExtractor()
 
@@ -80,6 +41,7 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             
+            // PERBAIKAN UTAMA: Mengizinkan HTML lokal memproses & menyuarakan audio dari HTTPS internet
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
@@ -88,11 +50,6 @@ class MainActivity : AppCompatActivity() {
         
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
         webView.loadUrl("file:///android_asset/index.html")
-
-        // --- Mulai Bind ke AudioService agar bisa kirim data DSP secara real-time ---
-        Intent(this, AudioService::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
     }
 
     private fun initNewPipeExtractor() {
@@ -178,66 +135,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }.start()
-        }
-
-        // --- Fungsi ExoPlayer Native untuk Latar Belakang ---
-        @JavascriptInterface
-        fun playAudioNative(streamUrl: String, title: String) {
-            val intent = Intent(this@MainActivity, AudioService::class.java).apply {
-                putExtra("EXTRA_URL", streamUrl)
-                putExtra("EXTRA_TITLE", title)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-        }
-
-        @JavascriptInterface
-        fun stopAudioNative() {
-            val intent = Intent(this@MainActivity, AudioService::class.java)
-            intent.action = "ACTION_STOP"
-            startService(intent)
-        }
-
-        // =========================================================================
-        // --- TAMBAHAN: JEMBATAN DSP (Menerima perintah dari index.html) ---
-        // =========================================================================
-        @JavascriptInterface
-        fun updateDSPConfig(jsonConfig: String) {
-            runOnUiThread {
-                if (isBound) {
-                    audioService?.applyDSPConfig(jsonConfig)
-                }
-            }
-        }
-
-        @JavascriptInterface
-        fun setVolume(volume: Float) {
-            runOnUiThread {
-                if (isBound) {
-                    audioService?.setVolume(volume)
-                }
-            }
-        }
-
-        @JavascriptInterface
-        fun setMute(isMuted: Boolean) {
-            runOnUiThread {
-                if (isBound) {
-                    audioService?.setMute(isMuted)
-                }
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Putuskan ikatan service saat Activity dihancurkan untuk mencegah memory leak
-        if (isBound) {
-            unbindService(connection)
-            isBound = false
         }
     }
 }
