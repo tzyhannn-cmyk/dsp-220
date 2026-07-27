@@ -100,7 +100,8 @@ class AudioService : Service() {
                     true     // Limiter
                 ).build()
 
-                dynamicsProcessing = DynamicsProcessing(audioSessionId, config)
+                // DIPERBAIKI: Menggunakan 3 parameter (priority: 0, audioSessionId, config)
+                dynamicsProcessing = DynamicsProcessing(0, audioSessionId, config)
                 dynamicsProcessing?.enabled = true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -129,9 +130,6 @@ class AudioService : Service() {
                 val isMuted = json.getBoolean("isMuted")
                 player?.volume = if (isMuted) 0f else 1f
             }
-
-            // C. Pengaturan Equalizer/Limiter via DynamicsProcessing
-            // Parameter tambahan seperti HPF/LPF dapat diterapkan ke dynamicsProcessing di sini
 
         } catch (e: Exception) {
             e.printStackTrace()
