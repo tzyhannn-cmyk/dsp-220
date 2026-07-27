@@ -2,10 +2,14 @@ package com.dsp220.pro
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -14,7 +18,6 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.dsp220.pro.AudioService
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -26,6 +29,23 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+
+    // --- Tambahan untuk Koneksi ke AudioService (Kontrol DSP) ---
+    private var audioService: AudioService? = null
+    private var isBound = false
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as AudioService.LocalBinder
+            audioService = binder.getService()
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isBound = false
+            audioService = null
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +88,11 @@ class MainActivity : AppCompatActivity() {
         
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
         webView.loadUrl("file:///android_asset/index.html")
+
+        // --- Mulai Bind ke AudioService agar bisa kirim data DSP secara real-time ---
+        Intent(this, AudioService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
     }
 
     private fun initNewPipeExtractor() {
@@ -174,6 +199,45 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this@MainActivity, AudioService::class.java)
             intent.action = "ACTION_STOP"
             startService(intent)
+        }
+
+        // =========================================================================
+        // --- TAMBAHAN: JEMBATAN DSP (Menerima perintah dari index.html) ---
+        // =========================================================================
+        @JavascriptInterface
+        fun updateDSPConfig(jsonConfig: String) {
+            runOnUiThread {
+                if (isBound) {
+                    audioService?.applyDSPConfig(jsonConfig)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun setVolume(volume: Float) {
+            runOnUiThread {
+                if (isBound) {
+                    audioService?.setVolume(volume)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun setMute(isMuted: Boolean) {
+            runOnUiThread {
+                if (isBound) {
+                    audioService?.setMute(isMuted)
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Putuskan ikatan service saat Activity dihancurkan untuk mencegah memory leak
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
         }
     }
 }
