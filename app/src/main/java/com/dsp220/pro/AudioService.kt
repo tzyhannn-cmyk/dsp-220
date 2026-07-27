@@ -23,24 +23,22 @@ class AudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // 1. Cek jika ada perintah STOP dari MainActivity
         if (intent?.action == "ACTION_STOP") {
             player?.stop()
             stopSelf()
             return START_NOT_STICKY
         }
 
-        // 2. Ambil data URL dan Judul (Disesuaikan dengan kunci di MainActivity.kt)
         val audioUrl = intent?.getStringExtra("EXTRA_URL")
         val audioTitle = intent?.getStringExtra("EXTRA_TITLE") ?: "Sedang memutar audio..."
 
-        // 3. Buat dan tampilkan notifikasi di Foreground
         val notification = createNotification("Pemutar Musik", audioTitle)
         startForeground(1, notification)
 
-        // 4. Putar Audio pakai ExoPlayer
-        if (!audioUrl.isNullOrEmpty()) {
-            playAudio(audioUrl)
+        audioUrl?.let { url ->
+            if (url.isNotEmpty()) {
+                playAudio(url)
+            }
         }
 
         return START_STICKY
@@ -61,7 +59,7 @@ class AudioService : Service() {
             .setContentText(content)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true) // Notifikasi tidak bisa di-swipe hapus saat lagu jalan
+            .setOngoing(true)
             .build()
     }
 
