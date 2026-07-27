@@ -721,16 +721,29 @@
             }
         }
 
-        // 2. Callback yang dipanggil oleh Android Native saat proses ekstraksi audio berhasil
-        function onAudioExtracted(audioUrl) {
-            document.getElementById('extractYtBtn').innerText = "EXTRACT";
-            initAudioEngine(); 
-            audioEl.src = audioUrl;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            audioEl.play();
-            playPauseBtn.innerText = "PAUSE";
-            playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
-        }
+// 2. Callback yang dipanggil oleh Android Native saat proses ekstraksi audio berhasil
+function onAudioExtracted(audioUrl) {
+    document.getElementById('extractYtBtn').innerText = "EXTRACT";
+
+    // 1. Cek apakah fungsi ExoPlayer Native Android tersedia di AndroidBridge
+    if (window.AndroidBridge && window.AndroidBridge.playAudioNative) {
+        // Alihkan pemutaran musik ke ExoPlayer Native Service agar TETAP JALAN di background!
+        window.AndroidBridge.playAudioNative(audioUrl, "YouTube Audio Stream");
+        
+        // Update tampilan tombol Play/Pause di web UI
+        playPauseBtn.innerText = "PLAYING (NATIVE)";
+        playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
+    } else {
+        // 2. Fallback: Gunakan pemutar web bawaan jika dijalankan di Browser PC/Laptop
+        initAudioEngine(); 
+        audioEl.src = audioUrl;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        audioEl.play();
+        playPauseBtn.innerText = "PAUSE";
+        playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+    }
+}
+
 
         // 3. Callback yang dipanggil oleh Android Native saat ekstraksi gagal
         function onExtractionFailed(errorMsg) {
