@@ -146,14 +146,11 @@
                             <!-- Input File Musik Lokal -->
                             <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-500 w-full file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-medium file:bg-slate-900 file:text-slate-300 hover:file:bg-slate-800 file:cursor-pointer">
 
-                            <!-- ================================================================= -->
-                            <!-- [ANDROID BRIDGE] INPUT & TOMBOL EXTRACT YOUTUBE DI BAWAH INI      -->
-                            <!-- ================================================================= -->
+                            <!-- [ANDROID BRIDGE] INPUT & TOMBOL EXTRACT YOUTUBE -->
                             <div class="flex gap-1.5 items-center w-full sm:w-auto">
                                 <input type="text" id="ytUrlInput" placeholder="Paste YouTube Link..." class="bg-slate-900 border border-slate-800 text-[10px] text-slate-300 px-2 py-1 rounded-md focus:outline-none focus:border-cyan-500 flex-1 sm:w-48 font-mono">
                                 <button id="extractYtBtn" onclick="sendUrlToAndroid()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded transition whitespace-nowrap">EXTRACT</button>
                             </div>
-                            <!-- ================================================================= -->
                         </div>
 
                         <div class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800/60 shrink-0 w-full sm:w-72">
@@ -512,7 +509,7 @@
         </footer>
     </div>
 
-    <!-- REENGINEERED JAVASCRIPT AUDIO ENGINE -->
+    <!-- REENGINEERED JAVASCRIPT AUDIO ENGINE & ANDROID BRIDGE INTEGRATION -->
     <script>
         const chartFreqs = ['20Hz', '50Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
         const eqFrequencies = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
@@ -579,6 +576,13 @@
         }
 
         playPauseBtn.addEventListener('click', () => {
+            // Pemutaran via Android Native Service (ExoPlayer) jika terhubung
+            if (window.AndroidBridge && window.AndroidBridge.toggleNativePlayPause) {
+                window.AndroidBridge.toggleNativePlayPause();
+                return;
+            }
+
+            // Pemutaran audio lokal di Web Browser
             if (!audioEl.src) return;
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -603,7 +607,14 @@
             currentTimeDisplay.innerText = formatTime(audioEl.currentTime);
         });
 
-        seekSlider.addEventListener('input', () => { audioEl.currentTime = seekSlider.value; });
+        seekSlider.addEventListener('input', () => { 
+            if (window.AndroidBridge && window.AndroidBridge.seekToNative) {
+                window.AndroidBridge.seekToNative(parseFloat(seekSlider.value));
+            } else {
+                audioEl.currentTime = seekSlider.value; 
+            }
+        });
+
         audioEl.addEventListener('ended', () => {
             playPauseBtn.innerText = "PLAY";
             playPauseBtn.className = "bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
@@ -703,7 +714,7 @@
         });
 
         /* ========================================================================================= */
-        /* [ANDROID BRIDGE LOGIC] FUNGSI UTAMA KOMUNIKASI WEB <-> ANDROID (YOUTUBE EXTRACTOR)        */
+        /* [ANDROID BRIDGE LOGIC] FUNGSI UTAMA KOMUNIKASI WEB <-> ANDROID                            */
         /* ========================================================================================= */
 
         // 1. Mengirim URL YouTube dari Web UI ke aplikasi Android Native
@@ -711,44 +722,67 @@
             const url = document.getElementById('ytUrlInput').value;
             if (!url) return alert('Masukkan link YouTube terlebih dahulu!');
 
-            // Mengecek apakah berjalan di dalam WebView Android yang memasang object 'AndroidBridge'
-            if (window.AndroidBridge) {
+            if (window.AndroidBridge && window.AndroidBridge.extractYouTubeAudio) {
                 document.getElementById('extractYtBtn').innerText = "EXTRACTING...";
-                // Memanggil method Java/Kotlin: @JavascriptInterface public void extractYouTubeAudio(String url)
                 window.AndroidBridge.extractYouTubeAudio(url);
             } else {
                 alert("Fitur ekstraksi hanya berfungsi di dalam aplikasi Android.");
             }
         }
 
-// 2. Callback yang dipanggil oleh Android Native saat proses ekstraksi audio berhasil
-function onAudioExtracted(audioUrl) {
-    document.getElementById('extractYtBtn').innerText = "EXTRACT";
+        // 2. Callback saat proses ekstraksi audio berhasil
+        function onAudioExtracted(audioUrl) {
+            document.getElementById('extractYtBtn').innerText = "EXTRACT";
 
-    // 1. Cek apakah fungsi ExoPlayer Native Android tersedia di AndroidBridge
-    if (window.AndroidBridge && window.AndroidBridge.playAudioNative) {
-        // Alihkan pemutaran musik ke ExoPlayer Native Service agar TETAP JALAN di background!
-        window.AndroidBridge.playAudioNative(audioUrl, "YouTube Audio Stream");
-        
-        // Update tampilan tombol Play/Pause di web UI
-        playPauseBtn.innerText = "PLAYING (NATIVE)";
-        playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
-    } else {
-        // 2. Fallback: Gunakan pemutar web bawaan jika dijalankan di Browser PC/Laptop
-        initAudioEngine(); 
-        audioEl.src = audioUrl;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        audioEl.play();
-        playPauseBtn.innerText = "PAUSE";
-        playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
-    }
-}
+            if (window.AndroidBridge && window.AndroidBridge.playAudioNative) {
+                window.AndroidBridge.playAudioNative(audioUrl, "YouTube Audio Stream");
+                
+                playPauseBtn.innerText = "PAUSE (NATIVE)";
+                playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
+            } else {
+                initAudioEngine(); 
+                audioEl.src = audioUrl;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                audioEl.play();
+                playPauseBtn.innerText = "PAUSE";
+                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
+            }
+        }
 
-
-        // 3. Callback yang dipanggil oleh Android Native saat ekstraksi gagal
+        // 3. Callback saat ekstraksi gagal
         function onExtractionFailed(errorMsg) {
             document.getElementById('extractYtBtn').innerText = "EXTRACT";
             alert("Ekstraksi Gagal: " + errorMsg);
+        }
+
+        // 4. Pengiriman parameter DSP secara Real-Time ke Native Android DynamicsProcessing / Engine
+        function syncDSPToNativeAndroid(data) {
+            if (window.AndroidBridge && window.AndroidBridge.updateNativeDSP) {
+                try {
+                    window.AndroidBridge.updateNativeDSP(JSON.stringify(data));
+                } catch (e) {
+                    console.error("Gagal mengirim data DSP ke Android Bridge:", e);
+                }
+            }
+        }
+
+        // 5. Callback sinkronisasi status pemutar audio dari Android Background Service
+        function syncPlayerFromNative(isPlaying, currentTimeSec, durationSec) {
+            if (durationSec > 0) {
+                seekSlider.max = durationSec;
+                durationDisplay.innerText = formatTime(durationSec);
+            }
+            if (!seekSlider.matches(':active')) {
+                seekSlider.value = currentTimeSec;
+                currentTimeDisplay.innerText = formatTime(currentTimeSec);
+            }
+            if (isPlaying) {
+                playPauseBtn.innerText = "PAUSE (NATIVE)";
+                playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
+            } else {
+                playPauseBtn.innerText = "PLAY (NATIVE)";
+                playPauseBtn.className = "bg-slate-800 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
+            }
         }
 
         /* ========================================================================================= */
@@ -880,6 +914,29 @@ function onAudioExtracted(audioUrl) {
                     dynamicLimit2 = Math.min(limitT2, -shelfGain2 * 0.25); dynamicCompT2 = Math.min(compT2, -12 - (shelfGain2 * 0.5)); dynamicCompR2 = Math.max(compR2, 4.0 + (shelfGain2 * 0.2)); 
                 }
             }
+
+            // [SINKRONISASI ANDROID BRIDGE]
+            syncDSPToNativeAndroid({
+                dvcEnabled,
+                outRouting,
+                routeCh1, routeCh2,
+                vol1: protectedVol1, vol2: protectedVol2,
+                mute1: mutes.ch1, mute2: mutes.ch2,
+                phase1: phases.ch1, phase2: phases.ch2,
+                hpf1: { freq: hpf1, slope: slopeHpf1 },
+                lpf1: { freq: lpf1, slope: slopeLpf1 },
+                hpf2: { freq: hpf2, slope: slopeHpf2 },
+                lpf2: { freq: lpf2, slope: slopeLpf2 },
+                shelf1: { freq: shelfFreq1, gain: shelfGain1, q: shelfQ1 },
+                shelf2: { freq: shelfFreq2, gain: shelfGain2, q: shelfQ2 },
+                delay1, delay2,
+                comp1: { threshold: dynamicCompT1, ratio: dynamicCompR1, attack: compA1, release: compV1 },
+                comp2: { threshold: dynamicCompT2, ratio: dynamicCompR2, attack: compA2, release: compV2 },
+                limiter1: { threshold: dynamicLimit1 },
+                limiter2: { threshold: dynamicLimit2 },
+                eq1: Array.from({length: 15}, (_, i) => eqBypassed.ch1 ? 0 : parseFloat(document.getElementById(`eq-1-${i}`).value)),
+                eq2: Array.from({length: 15}, (_, i) => eqBypassed.ch2 ? 0 : parseFloat(document.getElementById(`eq-2-${i}`).value))
+            });
 
             if (!audioCtx) return;
 
