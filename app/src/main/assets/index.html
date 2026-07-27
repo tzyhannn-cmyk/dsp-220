@@ -71,7 +71,7 @@
         .eq-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .eq-scroll::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-        /* --- STYLE TOMBOL PANDUAN DI FOOTER --- */
+        /* --- STYLE TOMBOL PANDUAN DI FOOTER (SESUAI GAMBAR 1000706701.png) --- */
         #guide-footer-btn {
             background-color: #06b6d4;
             color: #05070f;
@@ -114,7 +114,7 @@
                     
                     <div class="lcd-display rounded-xl p-3 h-14 flex-1 flex justify-between items-center px-4 font-mono">
                         <div>
-                            <div id="lcdPresetName" class="font-bold text-sm tracking-tight text-slate-100 flex items-center gap-1.5">MANUAL DEFAULT</div>
+                            <div id="lcdPresetName" class="font-bold text-sm tracking-tight text-slate-100 flex items-center gap-1.5"></div>
                             <div class="text-[10px] text-slate-500 tracking-wide mt-0.5 flex flex-wrap gap-1">
                                 <span>2-IN/2-OUT WITH</span>
                                 <span>XOVER COMPRESSOR LIMITER EQ DVC</span>
@@ -133,20 +133,20 @@
                 <!-- BARIS 2: PRESET SYSTEM & AUDIO PLAYER CONTROLLER -->
                 <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 w-full">
                     <div class="flex items-center gap-1.5 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 shrink-0">
-                        <select id="presetSelect" onchange="loadSelectedPreset()" class="text-[11px] p-2 rounded-lg font-mono w-36 border border-slate-800">
+                        <select id="presetSelect" class="text-[11px] p-2 rounded-lg font-mono w-36 border border-slate-800">
                             <option value="">-- PRESET --</option>
                         </select>
                         <button onclick="saveNewPreset()" class="bg-slate-100 hover:bg-white text-black text-[11px] font-bold px-2.5 py-2 rounded-md transition">SAVE</button>
                         <button onclick="deletePreset()" class="bg-slate-900 hover:bg-red-950 hover:text-red-400 text-slate-400 text-[11px] font-medium px-2.5 py-2 rounded-md transition border border-slate-800">DEL</button>
                     </div>
                     
-                    <!-- CONTROLLER BAR DENGAN YOUTUBE EXTRACTOR -->
+                    <!-- KODE CONTROLLER BARU DENGAN SLOT paste LINK YOUTUBE -->
                     <div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80">
                         <div class="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
-                            <!-- Input File Musik Lokal -->
+                            <!-- Tempat Input File Musik dari HP (Asli) -->
                             <input type="file" id="audioFile" accept="audio/*" class="text-[10px] text-slate-500 w-full file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border file:border-slate-800 file:text-[10px] file:font-medium file:bg-slate-900 file:text-slate-300 hover:file:bg-slate-800 file:cursor-pointer">
 
-                            <!-- [ANDROID BRIDGE] INPUT & TOMBOL EXTRACT YOUTUBE -->
+                            <!-- SLOT BARU: Tempat Paste Link YouTube -->
                             <div class="flex gap-1.5 items-center w-full sm:w-auto">
                                 <input type="text" id="ytUrlInput" placeholder="Paste YouTube Link..." class="bg-slate-900 border border-slate-800 text-[10px] text-slate-300 px-2 py-1 rounded-md focus:outline-none focus:border-cyan-500 flex-1 sm:w-48 font-mono">
                                 <button id="extractYtBtn" onclick="sendUrlToAndroid()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded transition whitespace-nowrap">EXTRACT</button>
@@ -331,7 +331,7 @@
                     <div class="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
                         <h4 class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">15-Band Parametric Equalizer</h4>
                         <div class="flex gap-2">
-                            <button id="eq-bypass-1" onclick="toggleEQBypass(1)" class="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded font-medium transition">BYPASS OFF</button>
+                            <button id="eq-bypass-1" onclick="toggleEQBypass(1)" class="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded font-medium transition">BYPASS  OFF</button>
                             <button onclick="resetEQ(1)" class="text-[9px] bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-800 font-medium transition">RESET</button>
                         </div>
                     </div>
@@ -503,13 +503,14 @@
         <footer class="flex flex-col items-center justify-center text-center text-slate-600 text-[10px] font-mono pt-4 border-t border-slate-900/60 pb-4">
              <div>AUDIO LOGIC DP 220  |  Audio Processing Engine • Powered by DW PROJECT</div>
              
+             <!-- MASUKKAN URL PANDUAN LUAR ANDA PADA ATRIBUT href DI BAWAH INI -->
              <a href="https://userguidedsp.netlify.app/" target="_blank" rel="noopener noreferrer" id="guide-footer-btn">
                 <span class="text-red-500 font-extrabold text-sm font-sans">?</span> PANDUAN DLMS
              </a>
         </footer>
     </div>
 
-    <!-- REENGINEERED JAVASCRIPT AUDIO ENGINE & ANDROID BRIDGE INTEGRATION -->
+    <!-- REENGINEERED JAVASCRIPT AUDIO ENGINE -->
     <script>
         const chartFreqs = ['20Hz', '50Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
         const eqFrequencies = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000];
@@ -576,13 +577,6 @@
         }
 
         playPauseBtn.addEventListener('click', () => {
-            // Pemutaran via Android Native Service (ExoPlayer) jika terhubung
-            if (window.AndroidBridge && window.AndroidBridge.toggleNativePlayPause) {
-                window.AndroidBridge.toggleNativePlayPause();
-                return;
-            }
-
-            // Pemutaran audio lokal di Web Browser
             if (!audioEl.src) return;
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -607,14 +601,7 @@
             currentTimeDisplay.innerText = formatTime(audioEl.currentTime);
         });
 
-        seekSlider.addEventListener('input', () => { 
-            if (window.AndroidBridge && window.AndroidBridge.seekToNative) {
-                window.AndroidBridge.seekToNative(parseFloat(seekSlider.value));
-            } else {
-                audioEl.currentTime = seekSlider.value; 
-            }
-        });
-
+        seekSlider.addEventListener('input', () => { audioEl.currentTime = seekSlider.value; });
         audioEl.addEventListener('ended', () => {
             playPauseBtn.innerText = "PLAY";
             playPauseBtn.className = "bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
@@ -713,16 +700,12 @@
             }
         });
 
-        /* ========================================================================================= */
-        /* [ANDROID BRIDGE LOGIC] FUNGSI UTAMA KOMUNIKASI WEB <-> ANDROID                            */
-        /* ========================================================================================= */
-
-        // 1. Mengirim URL YouTube dari Web UI ke aplikasi Android Native
+        /* --- FUNGSI EXTRACTOR ANDROID BRIDGE & PLAYBACK YOUTUBE --- */
         function sendUrlToAndroid() {
             const url = document.getElementById('ytUrlInput').value;
             if (!url) return alert('Masukkan link YouTube terlebih dahulu!');
 
-            if (window.AndroidBridge && window.AndroidBridge.extractYouTubeAudio) {
+            if (window.AndroidBridge) {
                 document.getElementById('extractYtBtn').innerText = "EXTRACTING...";
                 window.AndroidBridge.extractYouTubeAudio(url);
             } else {
@@ -730,62 +713,20 @@
             }
         }
 
-        // 2. Callback saat proses ekstraksi audio berhasil
         function onAudioExtracted(audioUrl) {
             document.getElementById('extractYtBtn').innerText = "EXTRACT";
-
-            if (window.AndroidBridge && window.AndroidBridge.playAudioNative) {
-                window.AndroidBridge.playAudioNative(audioUrl, "YouTube Audio Stream");
-                
-                playPauseBtn.innerText = "PAUSE (NATIVE)";
-                playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
-            } else {
-                initAudioEngine(); 
-                audioEl.src = audioUrl;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                audioEl.play();
-                playPauseBtn.innerText = "PAUSE";
-                playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
-            }
+            initAudioEngine(); 
+            audioEl.src = audioUrl;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            audioEl.play();
+            playPauseBtn.innerText = "PAUSE";
+            playPauseBtn.className = "bg-slate-100 hover:bg-white text-black text-[10px] font-bold px-3 py-1 rounded transition w-16 text-center";
         }
 
-        // 3. Callback saat ekstraksi gagal
         function onExtractionFailed(errorMsg) {
             document.getElementById('extractYtBtn').innerText = "EXTRACT";
             alert("Ekstraksi Gagal: " + errorMsg);
         }
-
-        // 4. Pengiriman parameter DSP secara Real-Time ke Native Android DynamicsProcessing / Engine
-        function syncDSPToNativeAndroid(data) {
-            if (window.AndroidBridge && window.AndroidBridge.updateNativeDSP) {
-                try {
-                    window.AndroidBridge.updateNativeDSP(JSON.stringify(data));
-                } catch (e) {
-                    console.error("Gagal mengirim data DSP ke Android Bridge:", e);
-                }
-            }
-        }
-
-        // 5. Callback sinkronisasi status pemutar audio dari Android Background Service
-        function syncPlayerFromNative(isPlaying, currentTimeSec, durationSec) {
-            if (durationSec > 0) {
-                seekSlider.max = durationSec;
-                durationDisplay.innerText = formatTime(durationSec);
-            }
-            if (!seekSlider.matches(':active')) {
-                seekSlider.value = currentTimeSec;
-                currentTimeDisplay.innerText = formatTime(currentTimeSec);
-            }
-            if (isPlaying) {
-                playPauseBtn.innerText = "PAUSE (NATIVE)";
-                playPauseBtn.className = "bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
-            } else {
-                playPauseBtn.innerText = "PLAY (NATIVE)";
-                playPauseBtn.className = "bg-slate-800 text-white text-[10px] font-bold px-3 py-1 rounded transition w-auto text-center";
-            }
-        }
-
-        /* ========================================================================================= */
 
         function toggleDVC() {
             dvcEnabled = !dvcEnabled;
@@ -914,29 +855,6 @@
                     dynamicLimit2 = Math.min(limitT2, -shelfGain2 * 0.25); dynamicCompT2 = Math.min(compT2, -12 - (shelfGain2 * 0.5)); dynamicCompR2 = Math.max(compR2, 4.0 + (shelfGain2 * 0.2)); 
                 }
             }
-
-            // [SINKRONISASI ANDROID BRIDGE]
-            syncDSPToNativeAndroid({
-                dvcEnabled,
-                outRouting,
-                routeCh1, routeCh2,
-                vol1: protectedVol1, vol2: protectedVol2,
-                mute1: mutes.ch1, mute2: mutes.ch2,
-                phase1: phases.ch1, phase2: phases.ch2,
-                hpf1: { freq: hpf1, slope: slopeHpf1 },
-                lpf1: { freq: lpf1, slope: slopeLpf1 },
-                hpf2: { freq: hpf2, slope: slopeHpf2 },
-                lpf2: { freq: lpf2, slope: slopeLpf2 },
-                shelf1: { freq: shelfFreq1, gain: shelfGain1, q: shelfQ1 },
-                shelf2: { freq: shelfFreq2, gain: shelfGain2, q: shelfQ2 },
-                delay1, delay2,
-                comp1: { threshold: dynamicCompT1, ratio: dynamicCompR1, attack: compA1, release: compV1 },
-                comp2: { threshold: dynamicCompT2, ratio: dynamicCompR2, attack: compA2, release: compV2 },
-                limiter1: { threshold: dynamicLimit1 },
-                limiter2: { threshold: dynamicLimit2 },
-                eq1: Array.from({length: 15}, (_, i) => eqBypassed.ch1 ? 0 : parseFloat(document.getElementById(`eq-1-${i}`).value)),
-                eq2: Array.from({length: 15}, (_, i) => eqBypassed.ch2 ? 0 : parseFloat(document.getElementById(`eq-2-${i}`).value))
-            });
 
             if (!audioCtx) return;
 
@@ -1212,163 +1130,63 @@
         }
 
         function togglePhase(ch) {
-            phases[`ch${ch}`] = !phases[`ch${ch}`]; 
-            const btn = document.getElementById(`phase-ch${ch}`);
-            if (phases[`ch${ch}`]) {
-                btn.className = "px-2.5 py-1.5 bg-cyan-950/80 border border-cyan-800 text-[10px] font-bold rounded-md text-cyan-400 shadow-inner";
-                btn.innerText = "Ø 180° [ON]";
+            phases[`ch${ch}`] = !phases[`ch${ch}`]; const btn = document.getElementById(`phase-ch${ch}`);
+            if(phases[`ch${ch}`]) {
+                btn.className = `px-2.5 py-1.5 text-[10px] font-bold rounded-md border transition ${ch === 1 ? 'bg-cyan-950/60 border-cyan-800 text-cyan-400' : 'bg-pink-950/60 border-pink-800 text-pink-400'}`;
             } else {
-                btn.className = "px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-[10px] font-semibold rounded-md text-slate-300 border border-slate-800 transition";
-                btn.innerText = "Ø 180°";
+                btn.className = "px-2.5 py-1.5 bg-slate-900 text-[10px] font-semibold rounded-md text-slate-300 border border-slate-800 transition";
             }
             updateHardwareDSP();
         }
 
-        /* --- PRESET MANAGEMENT SYSTEM --- */
-        const presetSelect = document.getElementById('presetSelect');
-        
-        function getSavedPresets() {
-            return JSON.parse(localStorage.getItem('dsp_presets') || '{}');
+        const targetControlIds = [
+            'hpf-1', 'lpf-1', 'hpf-slope-1', 'lpf-slope-1', 'delay-1', 'vol-ch1', 'comp-t-1', 'comp-r-1', 'comp-a-1', 'comp-v-1', 'limit-t-1', 'shelf-freq-1', 'shelf-gain-1', 'shelf-q-1', 'route-ch1',
+            'hpf-2', 'lpf-2', 'hpf-slope-2', 'lpf-slope-2', 'delay-2', 'vol-ch2', 'comp-t-2', 'comp-r-2', 'comp-a-2', 'comp-v-2', 'limit-t-2', 'shelf-freq-2', 'shelf-gain-2', 'shelf-q-2', 'route-ch2'
+        ];
+        for(let i=0; i<15; i++) { targetControlIds.push(`eq-1-${i}`); targetControlIds.push(`eq-2-${i}`); }
+
+        function saveNewPreset() {
+            const name = prompt("Masukkan nama preset:"); if (!name) return;
+            const cleanName = name.replace(/[^a-zA-Z0-9_]/g, "").toUpperCase();
+            let presets = JSON.parse(localStorage.getItem('dlms_user_presets')) || {}; let dataset = {};
+            targetControlIds.forEach(id => { if (document.getElementById(id)) dataset[id] = document.getElementById(id).value; });
+            presets[cleanName] = dataset; localStorage.setItem('dlms_user_presets', JSON.stringify(presets));
+            reloadPresetDropdown(); document.getElementById('presetSelect').value = cleanName;
+            document.getElementById('lcdPresetName').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>USR: ` + cleanName;
         }
 
-        function updatePresetDropdown() {
-            const presets = getSavedPresets();
-            presetSelect.innerHTML = '<option value="">-- PRESET --</option>';
-            Object.keys(presets).forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.innerText = name.toUpperCase();
-                presetSelect.appendChild(opt);
+        function reloadPresetDropdown() {
+            const select = document.getElementById('presetSelect'); select.innerHTML = '<option value="">-- PRESET --</option>';
+            let presets = JSON.parse(localStorage.getItem('dlms_user_presets')) || {};
+            Object.keys(presets).forEach(pName => {
+                let opt = document.createElement('option'); opt.value = pName; opt.innerText = pName; select.appendChild(opt);
             });
         }
 
-        function saveNewPreset() {
-            const name = prompt("Masukkan nama preset baru:");
-            if (!name) return;
-            
-            const presetData = {
-                routeCh1: document.getElementById('route-ch1').value,
-                routeCh2: document.getElementById('route-ch2').value,
-                outRoutingCh1: outRouting.ch1,
-                outRoutingCh2: outRouting.ch2,
-                vol1: document.getElementById('vol-ch1').value,
-                vol2: document.getElementById('vol-ch2').value,
-                hpf1: document.getElementById('hpf-1').value,
-                lpf1: document.getElementById('lpf-1').value,
-                hpfSlope1: document.getElementById('hpf-slope-1').value,
-                lpfSlope1: document.getElementById('lpf-slope-1').value,
-                hpf2: document.getElementById('hpf-2').value,
-                lpf2: document.getElementById('lpf-2').value,
-                hpfSlope2: document.getElementById('hpf-slope-2').value,
-                lpfSlope2: document.getElementById('lpf-slope-2').value,
-                shelfFreq1: document.getElementById('shelf-freq-1').value,
-                shelfQ1: document.getElementById('shelf-q-1').value,
-                shelfGain1: document.getElementById('shelf-gain-1').value,
-                shelfFreq2: document.getElementById('shelf-freq-2').value,
-                shelfQ2: document.getElementById('shelf-q-2').value,
-                shelfGain2: document.getElementById('shelf-gain-2').value,
-                delay1: document.getElementById('delay-1').value,
-                delay2: document.getElementById('delay-2').value,
-                compT1: document.getElementById('comp-t-1').value,
-                compR1: document.getElementById('comp-r-1').value,
-                compA1: document.getElementById('comp-a-1').value,
-                compV1: document.getElementById('comp-v-1').value,
-                limitT1: document.getElementById('limit-t-1').value,
-                compT2: document.getElementById('comp-t-2').value,
-                compR2: document.getElementById('comp-r-2').value,
-                compA2: document.getElementById('comp-a-2').value,
-                compV2: document.getElementById('comp-v-2').value,
-                limitT2: document.getElementById('limit-t-2').value,
-                eq1: Array.from({length: 15}, (_, i) => document.getElementById(`eq-1-${i}`).value),
-                eq2: Array.from({length: 15}, (_, i) => document.getElementById(`eq-2-${i}`).value)
-            };
-
-            const presets = getSavedPresets();
-            presets[name] = presetData;
-            localStorage.setItem('dsp_presets', JSON.stringify(presets));
-            updatePresetDropdown();
-            presetSelect.value = name;
-            document.getElementById('lcdPresetName').innerText = name.toUpperCase();
-        }
-
-        function loadSelectedPreset() {
-            const name = presetSelect.value;
-            if (!name) return;
-            const presets = getSavedPresets();
-            const p = presets[name];
-            if (!p) return;
-
-            document.getElementById('route-ch1').value = p.routeCh1 || 'LEFT';
-            document.getElementById('route-ch2').value = p.routeCh2 || 'RIGHT';
-            outRouting.ch1 = p.outRoutingCh1 || 'L';
-            outRouting.ch2 = p.outRoutingCh2 || 'R';
-
-            document.getElementById('vol-ch1').value = p.vol1 || 1;
-            document.getElementById('vol-ch2').value = p.vol2 || 1;
-
-            document.getElementById('hpf-1').value = p.hpf1 || 20;
-            document.getElementById('lpf-1').value = p.lpf1 || 500;
-            document.getElementById('hpf-slope-1').value = p.hpfSlope1 || 'LR-24';
-            document.getElementById('lpf-slope-1').value = p.lpfSlope1 || 'LR-24';
-
-            document.getElementById('hpf-2').value = p.hpf2 || 100;
-            document.getElementById('lpf-2').value = p.lpf2 || 16000;
-            document.getElementById('hpf-slope-2').value = p.hpfSlope2 || 'LR-24';
-            document.getElementById('lpf-slope-2').value = p.lpfSlope2 || 'LR-24';
-
-            document.getElementById('shelf-freq-1').value = p.shelfFreq1 || 60;
-            document.getElementById('shelf-q-1').value = p.shelfQ1 || 0.7;
-            document.getElementById('shelf-gain-1').value = p.shelfGain1 || 0;
-
-            document.getElementById('shelf-freq-2').value = p.shelfFreq2 || 4000;
-            document.getElementById('shelf-q-2').value = p.shelfQ2 || 0.7;
-            document.getElementById('shelf-gain-2').value = p.shelfGain2 || 0;
-
-            document.getElementById('delay-1').value = p.delay1 || 0;
-            document.getElementById('delay-2').value = p.delay2 || 0;
-
-            document.getElementById('comp-t-1').value = p.compT1 || 0;
-            document.getElementById('comp-r-1').value = p.compR1 || 1;
-            document.getElementById('comp-a-1').value = p.compA1 || 30;
-            document.getElementById('comp-v-1').value = p.compV1 || 200;
-            document.getElementById('limit-t-1').value = p.limitT1 || 0;
-
-            document.getElementById('comp-t-2').value = p.compT2 || 0;
-            document.getElementById('comp-r-2').value = p.compR2 || 1;
-            document.getElementById('comp-a-2').value = p.compA2 || 30;
-            document.getElementById('comp-v-2').value = p.compV2 || 200;
-            document.getElementById('limit-t-2').value = p.limitT2 || 0;
-
-            if (p.eq1) p.eq1.forEach((val, i) => { if (document.getElementById(`eq-1-${i}`)) document.getElementById(`eq-1-${i}`).value = val; });
-            if (p.eq2) p.eq2.forEach((val, i) => { if (document.getElementById(`eq-2-${i}`)) document.getElementById(`eq-2-${i}`).value = val; });
-
-            document.getElementById('lcdPresetName').innerText = name.toUpperCase();
+        function loadSelectedPreset(presetName) {
+            if (!presetName) { document.getElementById('lcdPresetName').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>`; return; }
+            let presets = JSON.parse(localStorage.getItem('dlms_user_presets')) || {}; let data = presets[presetName]; if (!data) return;
+            Object.keys(data).forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = data[id]; });
+            document.getElementById('lcdPresetName').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>USR: ` + presetName;
             updateHardwareDSP();
         }
 
         function deletePreset() {
-            const name = presetSelect.value;
-            if (!name) return alert("Pilih preset yang ingin dihapus!");
+            const select = document.getElementById('presetSelect'); const name = select.value; if (!name) return;
             if (confirm(`Hapus preset "${name}"?`)) {
-                const presets = getSavedPresets();
-                delete presets[name];
-                localStorage.setItem('dsp_presets', JSON.stringify(presets));
-                updatePresetDropdown();
-                document.getElementById('lcdPresetName').innerText = "MANUAL DEFAULT";
+                let presets = JSON.parse(localStorage.getItem('dlms_user_presets')) || {}; delete presets[name];
+                localStorage.setItem('dlms_user_presets', JSON.stringify(presets)); reloadPresetDropdown(); updateHardwareDSP();
+                document.getElementById('lcdPresetName').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>`;
             }
         }
 
-        /* --- INISIALISASI EVENT LISTENERS DAN LOAD DAFTAR PRESET --- */
-        window.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('input[type=range], select').forEach(elem => {
-                if (elem.id !== 'ytUrlInput' && elem.id !== 'audioFile' && elem.id !== 'presetSelect' && elem.id !== 'seekSlider') {
-                    elem.addEventListener('input', updateHardwareDSP);
-                    elem.addEventListener('change', updateHardwareDSP);
-                }
-            });
-            updatePresetDropdown();
-            updateHardwareDSP();
+        document.getElementById('presetSelect').addEventListener('change', (e) => loadSelectedPreset(e.target.value));
+        targetControlIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', updateHardwareDSP);
         });
+
+        reloadPresetDropdown(); updateHardwareDSP();
     </script>
 </body>
 </html>
