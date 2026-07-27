@@ -1,7 +1,9 @@
 package com.dsp220.pro
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
@@ -10,6 +12,8 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -25,6 +29,18 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // --- MINTA IZIN NOTIFIKASI (Khusus Android 13+) ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this, 
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS), 
+                    101
+                )
+            }
+        }
 
         initNewPipeExtractor()
 
@@ -138,7 +154,7 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
 
-        // --- Tambahan: Fungsi ExoPlayer Native untuk Latar Belakang ---
+        // --- Fungsi ExoPlayer Native untuk Latar Belakang ---
         @JavascriptInterface
         fun playAudioNative(streamUrl: String, title: String) {
             val intent = Intent(this@MainActivity, AudioService::class.java).apply {
