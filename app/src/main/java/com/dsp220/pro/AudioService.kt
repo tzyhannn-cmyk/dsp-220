@@ -1,11 +1,10 @@
-package com.example.dsp220 // Sesuaikan dengan package Anda
+package com.dsp220.pro
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
-import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -24,14 +23,23 @@ class AudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val audioUrl = intent?.getStringExtra("AUDIO_URL")
+        // 1. Cek jika ada perintah STOP dari MainActivity
+        if (intent?.action == "ACTION_STOP") {
+            player?.stop()
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
-        // 1. Buat dan tampilkan notifikasi di Foreground
-        val notification = createNotification("Pemutar Musik", "Sedang memutar audio...")
+        // 2. Ambil data URL dan Judul (Disesuaikan dengan kunci di MainActivity.kt)
+        val audioUrl = intent?.getStringExtra("EXTRA_URL")
+        val audioTitle = intent?.getStringExtra("EXTRA_TITLE") ?: "Sedang memutar audio..."
+
+        // 3. Buat dan tampilkan notifikasi di Foreground
+        val notification = createNotification("Pemutar Musik", audioTitle)
         startForeground(1, notification)
 
-        // 2. Putar Audio pakai ExoPlayer
-        if (!audioUrl.isNull_or_empty()) {
+        // 4. Putar Audio pakai ExoPlayer
+        if (!audioUrl.isNullOrEmpty()) {
             playAudio(audioUrl)
         }
 
@@ -53,7 +61,7 @@ class AudioService : Service() {
             .setContentText(content)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true) // Agar notifikasi tidak bisa di-swipe hapus saat lagu jalan
+            .setOngoing(true) // Notifikasi tidak bisa di-swipe hapus saat lagu jalan
             .build()
     }
 
@@ -72,6 +80,7 @@ class AudioService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        player?.stop()
         player?.release()
         player = null
         super.onDestroy()
