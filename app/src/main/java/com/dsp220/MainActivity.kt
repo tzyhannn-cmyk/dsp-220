@@ -14,6 +14,7 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.dsp220.pro.AudioService
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -170,9 +171,8 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun stopAudioNative() {
-            val intent = Intent(this@MainActivity, AudioService::class.java).apply {
-                action = "ACTION_STOP"
-            }
+            val intent = Intent(this@MainActivity, AudioService::class.java)
+            intent.action = "ACTION_STOP"
             startService(intent)
         }
     }
